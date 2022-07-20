@@ -4,6 +4,122 @@ import * as THREE from "three";
 import { GLTFLoader } from "GTFLoader";
 import { TrackballControls } from './TrackballControls.js';
 
+
+
+const vertexShader = `
+  uniform float pointMultiplier;
+  attribute float scale;
+  attribute float alpha;
+ 
+  varying float alphaToFrag;
+ 
+  void main() {
+    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mvPosition;
+    gl_PointSize = pointMultiplier * 1500.0 * scale / gl_Position.w;
+ 
+    alphaToFrag = alpha;
+  }
+`;
+ 
+const fragmentShader = `
+  uniform sampler2D diffuseTexture;
+ 
+  varying float alphaToFrag;
+ 
+  void main() {
+    gl_FragColor = texture2D(diffuseTexture, gl_PointCoord) * vec4(1.0, 1.0, 1.0, alphaToFrag);
+  }
+`;
+ 
+class ParticleSystem {
+  constructor (texture, emit_every, particle_life) {
+    this.texture = texture;
+    this.emit_every = emit_every;
+    this.particle_life = particle_life;
+    this.last_emission = 0;
+ 
+    this.geometry = new THREE.BufferGeometry();
+    this.particles = [];
+    this.material = new THREE.ShaderMaterial({
+      uniforms: {
+        diffuseTexture: { value: texture },
+        pointMultiplier: { value: window.innerHeight / window.innerWidth }
+      },
+      vertexShader,
+      fragmentShader,
+      blending: THREE.NormalBlending,
+      depthTest: true,
+      depthWrite: false,
+      transparent: true,
+      vertexColors: true,
+    });
+ 
+    this.mesh = new THREE.Points(this.geometry, this.material);
+    this.clock = new THREE.Clock();
+  }
+ 
+  setPosition(position) {
+    this.mesh.position.x = position.x;
+    this.mesh.position.y = position.y;
+    this.mesh.position.z = position.z;
+  }
+ 
+  getMesh() {
+    return this.mesh;
+  }
+ 
+  updateAspect() {
+    this.material.uniforms.pointMultiplier.value = window.innerHeight / window.innerWidth;
+  }
+ 
+  spawn() {
+    this.particles.push({
+      position: [0, 0, 0],
+      scale: 1,
+      alpha: 1,
+      spawnTime: this.clock.elapsedTime,
+    });
+ 
+    this.last_emission = this.clock.elapsedTime;
+  }
+ 
+  update() {
+    const elapsedTime = this.clock.getElapsedTime();
+ 
+    this.particles = this.particles.filter((particle) => elapsedTime - particle.spawnTime < this.particle_life);
+ 
+    if (elapsedTime - this.last_emission >= this.emit_every) {
+      this.spawn();
+    }
+ 
+    this.geometry.setAttribute("position", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.position).flat(), 3));
+    this.geometry.setAttribute("scale", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.scale).flat(), 1));
+    this.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.alpha).flat(), 1));
+    this.geometry.attributes.position.needsUpdate = true;
+    this.geometry.attributes.scale.needsUpdate = true;
+  }
+}
+
+class ExpelParticleSystem extends ParticleSystem {
+    spawn() {
+      super.spawn();
+      //this.particles[this.particles.length - 1].dartX = Math.random() * 0.005 * (Math.random() > 0.5 ? 1 : -1 );
+      //this.particles[this.particles.length - 1].dartZ = Math.random() * 0.005 * (Math.random() > 0.5 ? 1 : -1 );
+    }
+   
+    update() {
+      const elapsedTime = this.clock.getElapsedTime();
+
+      for (let i = 0; i < this.particles.length; i++) {
+        this.particles[i].position[1] += 0.1;
+        this.particles[i].alpha = 1 - Math.max((elapsedTime - this.particles[i].spawnTime) / this.particle_life, 0);
+      }
+   
+      super.update();
+    }
+}
+
 class page {
     stats;
 
@@ -26,7 +142,14 @@ class page {
 
     particleSpinner;
 
+    loader;
+
+    particleTest;
+    particleTest2;
+
     init() {
+        this.loader = new THREE.TextureLoader();
+
         this.renderer = new THREE.WebGLRenderer({
             antialias: true
         });
@@ -37,7 +160,6 @@ class page {
 
         loadCounter++;        
         new GLTFLoader().load("../models/awing.glb", (glb) => {
-            console.log("load");
             this.awing = glb.scene;
 
             loadCounter--;
@@ -123,6 +245,24 @@ class page {
         
         this.scene.add(this.particleSpinner);
 
+        //particle test.
+        const particleWhite = this.loader.load("../images/particle-white.png");
+        particleWhite.flipY = false;
+
+        this.particleTest = new ExpelParticleSystem(particleWhite, 0.06, 2.7);
+        this.particleTest.setPosition(new THREE.Vector3(-5,0,0));
+
+        this.scene.add(this.particleTest.getMesh());
+
+        
+        const particleRed = this.loader.load("../images/particle-red.png");
+        particleRed.flipY = false;
+
+        this.particleTest2 = new ExpelParticleSystem(particleRed, 0.08, 2.3);
+        this.particleTest2.setPosition(new THREE.Vector3(5,0,0));
+
+        this.scene.add(this.particleTest2.getMesh());
+
         //initialize viewport
         
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -157,6 +297,9 @@ class page {
             //engine pos now has proper world position for particle system.
         }
 
+        this.particleTest.update();
+        this.particleTest2.update();
+
         //render final scene
         this.renderer.render(this.scene, this.camera);
     }
@@ -169,6 +312,10 @@ class page {
     onResize = () => {
         const width = window.innerWidth;
         const height = window.innerHeight;
+
+        
+        this.particleTest.updateAspect();
+        this.particleTest2.updateAspect();
 
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
