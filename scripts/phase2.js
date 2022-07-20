@@ -1,123 +1,122 @@
-﻿'use strict';
+﻿import * as site from "./site.js";
+import * as dac3d from "./dac3d.js";
+import * as stats from "./stats.js";
 
-(function () {
-    var ctx;
-    var divCanvas;
+class page {
+    ctx;
+    stats;
 
-    var stats;
+    dom = {
+        divCanvas: null,
+        cnvs: null
+    };
     
-    window.onload = function () {
-        stats = new Stats();
-        stats.domElement.style.position = "absolute";
-        stats.domElement.style.top = "10px";
-        stats.domElement.style.right = "10px";
-        document.body.appendChild(stats.domElement);
-
-        setTimeout(start, 256);
-    }
-
-    function resize() {
-        resizeStage(divCanvas, ctx);
-    }
-
-    function start() {
-        if (!!document.createElement('canvas').getContext) {
-            divCanvas = document.getElementById("divCanvas");
- 
-            ctx = document.getElementById("cnvs").getContext("2d");
-
-            resize();
-
-            window.onresize = resize;
-
-            init();
-
-            lastFrame = +new Date;
-
-            requestAnimationFrame(loop);
-        }
-    }
-
-
-
     //-- main rendering code -----------------------------------------------------------------------
 
-    var stage = [];
-    var poly, point, sprite, points, mul, shift, dim;
+    stage = [];
+    poly;
+    point;
+    sprite;
+    points;
+    mul;
+    shift;
+    dim;
 
-    var objs = [];
+    objs = [];
 
-    var caxis = [1, 1, 0];
+    caxis = [1, 1, 0];
 
-    var ar = 0;
-    var ar2 = 0;
-    var vr = 0;
-    var tm = new Array(16);
+    ar = 0;
+    ar2 = 0;
+    vr = 0;
+    tm = new Array(16);
 
-    var radTop = Math.PI * 2;
+    radTop = Math.PI * 2;
 
-    var lastFrame;
+    lastFrame = 0;
 
-    var bpe = new Array();
+    bpe = new Array();
 
-    var awpos = [0, 0, 50];
+    awpos = [0, 0, 50];
 
-    var bpedirection = [0, 0.3, 0];
-    var bped = new Array(3);
-    var pleft = [-28, 90, 0];
-    var pright = [28, 90, 0];
+    bpedirection = [0, 0.3, 0];
+    bped = new Array(3);
+    pleft = [-28, 90, 0];
+    pright = [28, 90, 0];
 
-    function init() {
-        objs.push(new object3d(createAWing(), 1.5));
+    init() {
+        this.objs.push(new dac3d.object3d(dac3d.createAWing(), 1.5));
 
-        bpe.push(new particleEngine("../images/particle-red.png", 0.25, 100, 200));
-        bpe.push(new particleEngine("../images/particle-red.png", 0.25, 100, 200));
+        this.bpe.push(new dac3d.particleEngine("../images/particle-red.png", 0.25, 100, 200));
+        this.bpe.push(new dac3d.particleEngine("../images/particle-red.png", 0.25, 100, 200));
     }
 
-    function loop(ct) {
-        requestAnimationFrame(loop);
+    loop = (ct) => {
+        requestAnimationFrame(this.loop);
 
-        let ms = ct - lastFrame;
-        lastFrame = ct;
+        this.stats.begin();
 
-        ctx.fillStyle = "#000000";
-        ctx.fillRect(0, 0, width, height);
+        let ms = ct - this.lastFrame;
+        this.lastFrame = ct;
 
-        stage = [];
+        this.ctx.fillStyle = "#000000";
+        this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
 
-        M4x4_clone(M4x4_I, tm);
+        this.stage = [];
+
+        dac3d.M4x4_clone(dac3d.M4x4_I, this.tm);
 
         //translate ship
-        M4x4_rotate(ar2, caxis, tm, tm);
-        M4x4_rotateX(ar, tm, tm);
-        M4x4_rotateY(ar2, tm, tm);
+        dac3d.M4x4_rotate(this.ar2, this.caxis, this.tm, this.tm);
+        dac3d.M4x4_rotateX(this.ar, this.tm, this.tm);
+        dac3d.M4x4_rotateY(this.ar2, this.tm, this.tm);
 
-        V3_mul4x4(tm, bpedirection, bped);
+        dac3d.V3_mul4x4(this.tm, this.bpedirection, this.bped);
 
         //translate ship pos in space
-        M4x4_translate3(awpos, tm, tm);
-        M4x4_rotateY(vr, tm, tm);
+        dac3d.M4x4_translate3(this.awpos, this.tm, this.tm);
+        dac3d.M4x4_rotateY(this.vr, this.tm, this.tm);
 
         //draw ship to stage
-        objs[0].draw(stage, tm);
+        this.objs[0].draw(this.stage, this.tm);
 
-        bpe[0].render(stage, V3_mul4x4(tm, pleft), bped, ms, 5);
-        bpe[1].render(stage, V3_mul4x4(tm, pright), bped, ms, 5);
+        this.bpe[0].render(this.stage, dac3d.V3_mul4x4(this.tm, this.pleft), this.bped, ms, 5);
+        this.bpe[1].render(this.stage, dac3d.V3_mul4x4(this.tm, this.pright), this.bped, ms, 5);
 
         //adjust rotation amounts.
-        ar += 0.001571 * ms;
-        if (ar > radTop) ar -= radTop;
+        this.ar += 0.001571 * ms;
+        if (this.ar > this.radTop) this.ar -= this.radTop;
 
-        ar2 += 0.0012 * ms;
-        if (ar2 > radTop) ar2 -= radTop;
+        this.ar2 += 0.0012 * ms;
+        if (this.ar2 > this.radTop) this.ar2 -= this.radTop;
 
-        vr += 0.0002 * ms;
-        if (vr > radTop) vr -= radTop;
+        this.vr += 0.0002 * ms;
+        if (this.vr > this.radTop) this.vr -= this.radTop;
 
-        renderStage(stage, ctx);
+        dac3d.renderStage(this.stage, this.ctx);
 
-        ctx.globalAlpha = 1;
+        this.ctx.globalAlpha = 1;
 
-        stats.update();
-    }    
-})();
+        this.stats.end();
+    }  
+    
+    //-- entry points ----------------------------
+
+    onLoad = () => {
+        this.stats = stats.init();
+ 
+        this.ctx = this.dom.cnvs.getContext("2d");
+
+        dac3d.resizeStage(this.dom.divCanvas, this.ctx);
+
+        this.init();
+
+        requestAnimationFrame(this.loop);
+    }
+
+    onResize = () => {
+        dac3d.resizeStage(this.dom.divCanvas, this.ctx);
+    }
+}
+
+site.registerPage(page);

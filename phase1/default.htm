@@ -4,10 +4,7 @@
     <title>DAC Website</title>
     <link href="../styles/main.css" rel="stylesheet" type="text/css" />
     
-    <script defer src="../scripts/site.js" type="text/javascript"></script>
-    <script defer src="../scripts/dac3d.js" type="text/javascript"></script>
-    <script defer src="../scripts/stats.min.js" type="text/javascript"></script>
-    <script defer src="../scripts/phase1.js" type="text/javascript"></script>
+    <script defer src="../scripts/phase1.js" type="module"></script>
 </head>
 <body>
     <div id="divCanvas">
@@ -19,7 +16,7 @@
     </div>
 
     <div id="divTopOptions">
-        <table border="0" cellspacing="0" cellpadding="0">
+        <table style="border:none;" cellspacing="0" cellpadding="0">
             <tr>
                 <td><label><input id="cbRedCube" type="checkbox" checked="checked" />Red Cube</label></td>
                 <td><label><input id="cbTorus" type="checkbox" checked="checked" />Torus</label></td>

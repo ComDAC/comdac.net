@@ -1,9 +1,25 @@
-'use strict';
+let pageObj;
 
-const emptyGuid = "00000000-0000-0000-0000-000000000000";
+export function registerPage(page) {
+    if (pageObj) {
+        if (pageObj.onResize) window.removeEventListener("resize", pageObj.onResize);
+        if (pageObj.onClose) window.removeEventListener("close", pageObj.onClose);
 
-function documentReady(f) {
-    window.addEventListener("load", f);
+        pageObj = null;
+    }
+
+    pageObj = new page();
+
+    window.addEventListener("load", pageLoad);
+    
+    if (pageObj.onResize) window.addEventListener("resize", pageObj.onResize);
+    if (pageObj.onClose) window.addEventListener("close", pageObj.onClose);
+}
+
+function pageLoad() {
+    if (pageObj.dom) populateDom(pageObj.dom);
+
+    if (pageObj.onLoad) pageObj.onLoad();
 }
 
 function populateDom(dom) {
@@ -12,23 +28,13 @@ function populateDom(dom) {
     });
 }
 
-function download(link) {
-    var a = document.createElement('a');
-    a.href = link;
-    a.setAttribute("download", "");
-
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-}
-
-function emptyNode(node) {
+export function emptyNode(node) {
     while (node.hasChildNodes()) {
         node.removeChild(node.firstChild);
     }
 }
 
-let ajax = function (options) {
+export let ajax = function (options) {
     class objAjax {
         constructor(options) {
             let doneEvent = null;

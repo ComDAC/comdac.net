@@ -1,20 +1,18 @@
-'use strict';
+let width = 0;
+let height = 0;
 
-var width = 0;
-var height = 0;
+let perspective = 512.0;
+let wall = 0 - perspective;
 
-var perspective = 512.0;
-var wall = 0 - perspective;
+let zzero = 512.0;
+let xzero = 160.0;
+let yzero = 160.0;
 
-var zzero = 512.0;
-var xzero = 160.0;
-var yzero = 160.0;
+let scale = 1;
 
-var perspectiveScale = perspective * scale;
+let perspectiveScale = perspective * scale;
 
-var scale = 1;
-
-function resizeStage(canvas, ctx) {
+export function resizeStage(canvas, ctx) {
     width = isNaN(canvas.clientWidth) ? 100 : canvas.clientWidth;
     height = isNaN(canvas.clientHeight) ? 100 : canvas.clientHeight;
     scale = Math.sqrt(width * width + height * height) / 800.0;
@@ -29,7 +27,7 @@ function stageSort(a, b) {
     return a.z - b.z;
 }
 
-function renderStage(stage, ctx) {
+export function renderStage(stage, ctx) {
     let s = stage.sort(stageSort).length;
 
     while (s--) {
@@ -80,7 +78,7 @@ function colorLuminance(hex, lum) {
 
     lum = lum || 0;
     // convert to decimal and change luminosity  
-    var rgb = "#", c, i;
+    let rgb = "#", c, i;
     for (i = 0; i < 3; i++) {
         c = parseInt(hex.substr(i * 2, 2), 16);
         c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
@@ -98,28 +96,30 @@ function convert2d(point, r) {
 
 //-- 3D Object Handler Object --------------------------------------------------------------------
 
-var colsteps = 48;
-var colmul = (colsteps - 0.0001) / (Math.PI / 2);
+let colsteps = 48;
+let colmul = (colsteps - 0.0001) / (Math.PI / 2);
 
-function object3d(object, size) {
-    var _i, _p;
-    var _pts = [];
+export function object3d(object, size) {
+    let _i, _p;
+    let _pts = [];
 
     for (_i = 0; _i < (object[0].length - 2) ; _i += 3) {
         _pts.push([object[0][_i] * size, object[0][_i + 1] * size, object[0][_i + 2] * size]);
     }
 
-    var _polys = object[1];
-    var _cols = new Array(object[2].length);
-    var _pt = new Array(_pts.length);
-    var _pt3d = new Array(_pts.length);
-    var _poly, _pp, _pc;
-    var _pgr = new Array(_polys.length);
-    var _a, _z;
-    var _norm = new Array(3);
-    var _poly, _pg;
-    var _plen = _polys.length;
-    var _ptlen = _pts.length;
+    let _polys = object[1];
+    let _cols = new Array(object[2].length);
+    let _pt = new Array(_pts.length);
+    let _pt3d = new Array(_pts.length);
+    let _poly;
+    let _pp;
+    let _pc;
+    let _pgr = new Array(_polys.length);
+    let _a, _z;
+    let _norm = new Array(3);
+    let _pg;
+    let _plen = _polys.length;
+    let _ptlen = _pts.length;
 
     for (_i = 0; _i < _cols.length; _i++) {
         _cols[_i] = new Array(colsteps);
@@ -182,12 +182,12 @@ function object3d(object, size) {
 //-- Particle Engine -----------------------------------------------------
 
 function particle(sprite, pos, vel, ttl) {
-    var _pos = pos.slice(0);
-    var _vel = vel.slice(0);
-    var _ttl = ttl;
-    var _obj = { "type": 1, "point": new Array(2), "sprite": sprite, "alpha": 1, "z": 0, "scale": 1 };
+    let _pos = pos.slice(0);
+    let _vel = vel.slice(0);
+    let _ttl = ttl;
+    let _obj = { "type": 1, "point": new Array(2), "sprite": sprite, "alpha": 1, "z": 0, "scale": 1 };
 
-    var _r = Math.random() / 2;
+    let _r = Math.random() / 2;
     _pos[0] += _vel[0] * _r;
     _pos[1] += _vel[1] * _r;
     _pos[2] += _vel[2] * _r;
@@ -226,19 +226,19 @@ function particle(sprite, pos, vel, ttl) {
     }
 }
 
-function particleEngine(img, spray, minlife, maxlife) {
-    var _particles = [];
-    var _tm = new Array(16);
-    var _vel = new Array(3);
-    var _ttl;
-    var _i;
-    var _n;
-    var _p;
-    var _ml = minlife;
-    var _mlm = maxlife - minlife;
-    var _mlfade = maxlife * 2;
-    var _s = spray;
-    var _img = { "img": new Image(), "hd": -9000, "d": 0 };
+export function particleEngine(img, spray, minlife, maxlife) {
+    let _particles = [];
+    let _tm = new Array(16);
+    let _vel = new Array(3);
+    let _ttl;
+    let _i;
+    let _n;
+    let _p;
+    let _ml = minlife;
+    let _mlm = maxlife - minlife;
+    let _mlfade = maxlife * 2;
+    let _s = spray;
+    let _img = { "img": new Image(), "hd": -9000, "d": 0 };
 
     _img.img.onload = function () {
         _img.d = this.width;
@@ -301,8 +301,8 @@ function particleEngine(img, spray, minlife, maxlife) {
 
 //-- Object Creation Routines --------------------------------------------
 
-function createCube(col) {
-    var obj = [[], [], [col]];
+export function createCube(col) {
+    let obj = [[], [], [col]];
 
     obj[0] = [1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1];
     obj[1] = [[1, 0, 5, 6, 0],
@@ -315,8 +315,8 @@ function createCube(col) {
     return obj;
 }
 
-function createStar(col) {
-    var obj = [[], [], [col]];
+export function createStar(col) {
+    let obj = [[], [], [col]];
 
     obj[0] = [1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1, 4, 0, 0, 0, 4, 0, -4, 0, 0, 0, -4, 0, 0, 0, 4, 0, 0, -4];
     obj[1] = [
@@ -349,14 +349,14 @@ function createStar(col) {
     return obj;
 }
 
-function createTorus(d1, d2, r1, r2, col) {
-    var i, j;
-    var obj = [[], [], [col]];
-    var rpi1 = (Math.PI * 2) / d1;
-    var rpi2 = (Math.PI * 2) / d2;
-    var pts = [];
-    var cir = [];
-    var tm;
+export function createTorus(d1, d2, r1, r2, col) {
+    let i, j;
+    let obj = [[], [], [col]];
+    let rpi1 = (Math.PI * 2) / d1;
+    let rpi2 = (Math.PI * 2) / d2;
+    let pts = [];
+    let cir = [];
+    let tm;
 
     cir.push([0, r2, 0]);
     tm = M4x4_rotateX(rpi2, M4x4_I);
@@ -395,8 +395,8 @@ function createTorus(d1, d2, r1, r2, col) {
     return obj;
 }
 
-function createAWing() {
-    var obj = [[], [], ["#111111", "#AA2222", "#666666", "#EEAAAA", "#333333", "#222222"]];
+export function createAWing() {
+    let obj = [[], [], ["#111111", "#AA2222", "#666666", "#EEAAAA", "#333333", "#222222"]];
 
     obj[0] = [8, 30, -8, 0, 30, -14, 0, 16, -16, 8, 16, -6, -8, 16, -6, -8, 30, -8, 0, -11, -2, 0, 48, -8, 17, 35, -8, 17, 40, -18, 17, 65, -18, 17, 65, -8, 17, 65, 8, 17, 65, 13, 17, 40, 13, 17, 35, 8, -17, 35, -8, -17, 40, -18, -17, 65, -18, -17, 65, -8, -17, 35, 8, -17, 40, 13, -17, 65, 13, -17, 65, 8, 24, 61, -3, 24, 61, 4, 24, 63, 4, 24, 63, -3, 10, 61, -3, 10, 61, 4, 10, 63, 4, 10, 63, -3, 17, 61, 8, 17, 63, 8, 17, 61, -8, 17, 63, -8, -24, 61, -3, -24, 61, 4, -24, 63, 4, -24, 63, -3, -10, 61, -3, -10, 61, 4, -10, 63, 4, -10, 63, -3, -17, 61, 8, -17, 63, 8, -17, 61, -8, -17, 63, -8, 24, 30, -3, 24, 30, 4, 24, 55, 4, 24, 55, -3, 17, 48, 8, 10, 48, 4, 10, 55, 4, 17, 55, 8, 17, 30, -8, 17, 55, -8, 10, 55, -3, 10, 48, -3, 17, 48, -8, 17, 30, 8, -17, 55, 8, -24, 55, 4, -24, 55, -3, -17, 55, -8, -10, 55, -3, -10, 55, 4, -24, 30, 4, -24, 30, -3, -10, 48, 4, -17, 48, 8, -17, 30, -8, -17, 48, -8, -10, 48, -3, -17, 30, 8, 32, 30, -3, 32, 30, 3, -32, 30, 3, -32, 30, -3, 33, -1, 0, 33, 35, 0, 33.5, 35, 0.25, 33.5, -1, 0.25, 33.5, 35, -0.25, 33.5, -1, -0.25, -33.5, -1, -0.25, -33.5, 35, -0.25, -33.5, 35, 0.25, -33.5, -1, 0.25, -33, 35, 0, -33, -1, 0, -32, 1, 2, -33, 1, 2, -33, 3, 0, -32, 3, 0, 32, 1, 2, 33, 1, 2, 33, 3, 0, 32, 3, 0, -32, 1, -2, -33, 1, -2, 32, 1, -2, 33, 1, -2, -17, -28, 0, 17, -28, 0, -6, 48, -4, 6, 48, -4, 6, 48, 4, -6, 48, 4];
 
@@ -494,14 +494,14 @@ function createAWing() {
 
 //-- mjs library -----------------------------------------------------------------
 
-function V3_mul4x4(m, v, r) {
+export function V3_mul4x4(m, v, r) {
     if (r == undefined)
         r = new Array(3);
 
-    var v0 = v[0];
-    var v1 = v[1];
-    var v2 = v[2];
-    var w = v0 * m[3] + v1 * m[7] + v2 * m[11] + m[15];
+    let v0 = v[0];
+    let v1 = v[1];
+    let v2 = v[2];
+    let w = v0 * m[3] + v1 * m[7] + v2 * m[11] + m[15];
 
     r[0] = (v0 * m[0] + v1 * m[4] + v2 * m[8] + m[12]) / w;
     r[1] = (v0 * m[1] + v1 * m[5] + v2 * m[9] + m[13]) / w;
@@ -510,7 +510,7 @@ function V3_mul4x4(m, v, r) {
     return r;
 }
 
-function V3_add(a, b, r) {
+export function V3_add(a, b, r) {
     if (r == undefined)
         r = new Array(3);
 
@@ -521,37 +521,37 @@ function V3_add(a, b, r) {
     return r;
 }
 
-function V3_normal(a, b, c, r) {
-    var b0 = b[0];
-    var b1 = b[1];
-    var b2 = b[2];
-    var a0 = a[0] - b0;
-    var a1 = a[1] - b1;
-    var a2 = a[2] - b2;
-    var c0 = c[0] - b0;
-    var c1 = c[1] - b1;
-    var c2 = c[2] - b2;
+export function V3_normal(a, b, c, r) {
+    let b0 = b[0];
+    let b1 = b[1];
+    let b2 = b[2];
+    let a0 = a[0] - b0;
+    let a1 = a[1] - b1;
+    let a2 = a[2] - b2;
+    let c0 = c[0] - b0;
+    let c1 = c[1] - b1;
+    let c2 = c[2] - b2;
 
     r[0] = a1 * c2 - a2 * c1;
     r[1] = a2 * c0 - a0 * c2;
     r[2] = a0 * c1 - a1 * c0;
 }
 
-function V3_length(a) {
+export function V3_length(a) {
     return Math.sqrt(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
 }
 
-function V3_normalize(a, r) {
+export function V3_normalize(a, r) {
     if (r == undefined)
         r = new Array(3);
-    var im = 1.0 / V3_length(a);
+    let im = 1.0 / V3_length(a);
     r[0] = a[0] * im;
     r[1] = a[1] * im;
     r[2] = a[2] * im;
     return r;
 }
 
-function V3_scale(a, k, r) {
+export function V3_scale(a, k, r) {
     if (r == undefined)
         r = new Array(3);
     r[0] = a[0] * k;
@@ -560,7 +560,7 @@ function V3_scale(a, k, r) {
     return r;
 }
 
-function V3_neg(a, r) {
+export function V3_neg(a, r) {
     if (r == undefined)
         r = new Array(3);
     r[0] = -a[0];
@@ -571,13 +571,13 @@ function V3_neg(a, r) {
 
 //-- M4x4 ----------------------------------------------------------------------------------
 
-var M4x4_I = [1.0, 0.0, 0.0, 0.0,
+export let M4x4_I = [1.0, 0.0, 0.0, 0.0,
             0.0, 1.0, 0.0, 0.0,
             0.0, 0.0, 1.0, 0.0,
             0.0, 0.0, 0.0, 1.0];
 
 
-function M4x4_clone(m, r) {
+export function M4x4_clone(m, r) {
     if (r == undefined)
         r = new Array(16);
 
@@ -601,51 +601,51 @@ function M4x4_clone(m, r) {
     return r;
 }
 
-function M4x4_rotate(angle, axis, m, r) {
+export function M4x4_rotate(angle, axis, m, r) {
     if (r == undefined)
         r = new Array(16);
 
-    var a0 = axis[0], a1 = axis[1], a2 = axis[2];
-    var l = Math.sqrt(a0 * a0 + a1 * a1 + a2 * a2);
-    var x = a0, y = a1, z = a2;
+    let a0 = axis[0], a1 = axis[1], a2 = axis[2];
+    let l = Math.sqrt(a0 * a0 + a1 * a1 + a2 * a2);
+    let x = a0, y = a1, z = a2;
     if (l != 1.0) {
-        var im = 1.0 / l;
+        let im = 1.0 / l;
         x *= im;
         y *= im;
         z *= im;
     }
-    var c = Math.cos(angle);
-    var c1 = 1 - c;
-    var s = Math.sin(angle);
-    var xs = x * s;
-    var ys = y * s;
-    var zs = z * s;
-    var xyc1 = x * y * c1;
-    var xzc1 = x * z * c1;
-    var yzc1 = y * z * c1;
+    let c = Math.cos(angle);
+    let c1 = 1 - c;
+    let s = Math.sin(angle);
+    let xs = x * s;
+    let ys = y * s;
+    let zs = z * s;
+    let xyc1 = x * y * c1;
+    let xzc1 = x * z * c1;
+    let yzc1 = y * z * c1;
 
-    var m11 = m[0];
-    var m21 = m[1];
-    var m31 = m[2];
-    var m41 = m[3];
-    var m12 = m[4];
-    var m22 = m[5];
-    var m32 = m[6];
-    var m42 = m[7];
-    var m13 = m[8];
-    var m23 = m[9];
-    var m33 = m[10];
-    var m43 = m[11];
+    let m11 = m[0];
+    let m21 = m[1];
+    let m31 = m[2];
+    let m41 = m[3];
+    let m12 = m[4];
+    let m22 = m[5];
+    let m32 = m[6];
+    let m42 = m[7];
+    let m13 = m[8];
+    let m23 = m[9];
+    let m33 = m[10];
+    let m43 = m[11];
 
-    var t11 = x * x * c1 + c;
-    var t21 = xyc1 + zs;
-    var t31 = xzc1 - ys;
-    var t12 = xyc1 - zs;
-    var t22 = y * y * c1 + c;
-    var t32 = yzc1 + xs;
-    var t13 = xzc1 + ys;
-    var t23 = yzc1 - xs;
-    var t33 = z * z * c1 + c;
+    let t11 = x * x * c1 + c;
+    let t21 = xyc1 + zs;
+    let t31 = xzc1 - ys;
+    let t12 = xyc1 - zs;
+    let t22 = y * y * c1 + c;
+    let t32 = yzc1 + xs;
+    let t13 = xzc1 + ys;
+    let t23 = yzc1 - xs;
+    let t33 = z * z * c1 + c;
 
     r[0] = m11 * t11 + m12 * t21 + m13 * t31;
     r[1] = m21 * t11 + m22 * t21 + m23 * t31;
@@ -669,21 +669,21 @@ function M4x4_rotate(angle, axis, m, r) {
     return r;
 }
 
-function M4x4_rotateX(angle, m, r) {
+export function M4x4_rotateX(angle, m, r) {
     if (r == undefined)
         r = new Array(16);
 
-    var c = Math.cos(angle);
-    var s = Math.sin(angle);
+    let c = Math.cos(angle);
+    let s = Math.sin(angle);
 
-    var a12 = m[4];
-    var a22 = m[5];
-    var a32 = m[6];
-    var a42 = m[7];
-    var a13 = m[8];
-    var a23 = m[9];
-    var a33 = m[10];
-    var a43 = m[11];
+    let a12 = m[4];
+    let a22 = m[5];
+    let a32 = m[6];
+    let a42 = m[7];
+    let a13 = m[8];
+    let a23 = m[9];
+    let a33 = m[10];
+    let a43 = m[11];
 
     r[0] = m[0];
     r[1] = m[1];
@@ -705,21 +705,21 @@ function M4x4_rotateX(angle, m, r) {
     return r;
 }
 
-function M4x4_rotateY(angle, m, r) {
+export function M4x4_rotateY(angle, m, r) {
     if (r == undefined)
         r = new Array(16);
 
-    var c = Math.cos(angle);
-    var s = Math.sin(angle);
+    let c = Math.cos(angle);
+    let s = Math.sin(angle);
 
-    var a11 = m[0];
-    var a21 = m[1];
-    var a31 = m[2];
-    var a41 = m[3];
-    var a13 = m[8];
-    var a23 = m[9];
-    var a33 = m[10];
-    var a43 = m[11];
+    let a11 = m[0];
+    let a21 = m[1];
+    let a31 = m[2];
+    let a41 = m[3];
+    let a13 = m[8];
+    let a23 = m[9];
+    let a33 = m[10];
+    let a43 = m[11];
 
     r[0] = a11 * c + a13 * s;
     r[1] = a21 * c + a23 * s;
@@ -741,21 +741,21 @@ function M4x4_rotateY(angle, m, r) {
     return r;
 }
 
-function M4x4_rotateZ(angle, m, r) {
+export function M4x4_rotateZ(angle, m, r) {
     if (r == undefined)
         r = new Array(16);
 
-    var c = Math.cos(angle);
-    var s = Math.sin(angle);
+    let c = Math.cos(angle);
+    let s = Math.sin(angle);
 
-    var a11 = m[0];
-    var a21 = m[1];
-    var a31 = m[2];
-    var a41 = m[3];
-    var a12 = m[4];
-    var a22 = m[5];
-    var a32 = m[6];
-    var a42 = m[7];
+    let a11 = m[0];
+    let a21 = m[1];
+    let a31 = m[2];
+    let a41 = m[3];
+    let a12 = m[4];
+    let a22 = m[5];
+    let a32 = m[6];
+    let a42 = m[7];
 
     r[0] = a11 * c - a12 * s;
     r[1] = a21 * c - a22 * s;
@@ -777,10 +777,10 @@ function M4x4_rotateZ(angle, m, r) {
     return r;
 }
 
-function M4x4_translate3(v, m, r) {
-    var x = v[0];
-    var y = v[1];
-    var z = v[2];
+export function M4x4_translate3(v, m, r) {
+    let x = v[0];
+    let y = v[1];
+    let z = v[2];
 
     if (r == m) {
         m[12] += m[0] * x + m[4] * y + m[8] * z;
@@ -793,18 +793,18 @@ function M4x4_translate3(v, m, r) {
     if (r == undefined)
         r = new Array(16);
 
-    var m11 = m[0];
-    var m21 = m[1];
-    var m31 = m[2];
-    var m41 = m[3];
-    var m12 = m[4];
-    var m22 = m[5];
-    var m32 = m[6];
-    var m42 = m[7];
-    var m13 = m[8];
-    var m23 = m[9];
-    var m33 = m[10];
-    var m43 = m[11];
+    let m11 = m[0];
+    let m21 = m[1];
+    let m31 = m[2];
+    let m41 = m[3];
+    let m12 = m[4];
+    let m22 = m[5];
+    let m32 = m[6];
+    let m42 = m[7];
+    let m13 = m[8];
+    let m23 = m[9];
+    let m33 = m[10];
+    let m43 = m[11];
 
     r[0] = m11;
     r[1] = m21;

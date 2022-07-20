@@ -4,12 +4,6 @@
     <title>DAC Website</title>
     <meta charset="utf-8" />
     <link href="../styles/main.css" rel="stylesheet" type="text/css" />
-
-    <script defer src="../scripts/site.js" type="text/javascript"></script>
-    <script defer src="../scripts/three.min.js" type="text/javascript"></script>
-    <script defer src="../scripts/stats.min.js" type="text/javascript"></script>
-    <script defer src="../scripts/trackball.min.js" type="text/javascript"></script>
-    <script defer src="../scripts/phase3.js" type="text/javascript"></script>
 </head>
 <body>
     <div id="divTitlebar">
@@ -24,5 +18,33 @@
     <div id="loadingMessage">
         Loading 3D models and setting up scene...
     </div>
+
+    <script id="particleFragmentShader" type="x-shader/x-fragment">
+        uniform vec3 color;
+        uniform sampler2D texture;
+        varying float vAlpha;
+
+        void main() {
+          gl_FragColor = vec4(color, vAlpha) * texture2D(texture, gl_PointCoord);
+        }
+    </script>
+
+    <script id="particleVertexShader" type="x-shader/x-vertex">
+        uniform float size;
+        attribute float alpha;
+        varying float vAlpha;
+
+        void main() {
+          vAlpha = alpha;
+          vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+          gl_PointSize = size * ( 200.0 / length( mvPosition.xyz ) );
+          gl_Position = projectionMatrix * mvPosition;
+        }
+    </script>
+
+    <script src="../scripts/three.min.js" type="text/javascript"></script>
+    <script src="../scripts/stats.js" type="text/javascript"></script>
+    <script src="../scripts/trackball.min.js" type="text/javascript"></script>
+    <script src="../scripts/phase3.js" type="text/javascript"></script>
 </body>
 </html>

@@ -1,98 +1,92 @@
-﻿'use strict';
+﻿import * as site from "./site.js";
+import * as dac3d from "./dac3d.js";
 
-(function () {
-    var ctx;
-    var divCanvas;
-
-    window.onload = function () {
-        setTimeout(start, 256);
-    }
-
-    function resize() {
-        resizeStage(divCanvas, ctx);
-    }
-
-    function start() {
-        if (!!document.createElement('canvas').getContext) {
-            divCanvas = document.getElementById("divCanvas");
-
-            ctx = document.getElementById("cnvs").getContext("2d");
-
-            resize();
-
-            window.onresize = resize;
-
-            init();
-
-            lastFrame = +new Date;
-
-            requestAnimationFrame(loop);
-        }
-    }
-
-
+class page {
+    ctx;
 
     //-- main rendering code -----------------------------------------------------------------------
 
-    var stage = [];
-    var objs = [];
+    stage = [];
+    objs = [];
 
-    var ar = 0;
-    var vr = 0;
-    var tm = new Array(16);
+    ar = 0;
+    vr = 0;
+    tm = new Array(16);
 
-    var radTop = Math.PI * 2;
+    radTop = Math.PI * 2;
 
-    var lastFrame;
+    lastFrame = 0;
 
-    var bpe = new Array();
+    bpe = new Array();
 
-    var pelocation = [120, 0, 0];
-    var pedirection = [0, 0.12, 0];
-    var pev = new Array(3);
-    var ped = new Array(3);
+    pelocation = [120, 0, 0];
+    pedirection = [0, 0.12, 0];
+    pev = new Array(3);
+    ped = new Array(3);
 
-    function init() {
-        objs.push(new object3d(createCube("#666666"), 23));
-
-        bpe.push(new particleEngine("images/particle-red.png", Math.PI / 2, 800, 1200));
-        bpe.push(new particleEngine("images/particle-red.png", Math.PI / 2, 800, 1200));
+    dom = {
+        divCanvas: null,
+        cnvs: null
     }
 
-    function loop(ct) {
-        requestAnimationFrame(loop);
+    init() {
+        this.objs.push(new dac3d.object3d(dac3d.createCube("#666666"), 23));
 
-        let ms = ct - lastFrame;
-        lastFrame = ct;
-
-        ctx.fillStyle = "#000000";
-        ctx.fillRect(0, 0, width, height);
-
-        stage = [];
-
-        M4x4_rotateY(ar, M4x4_I, tm);
-        M4x4_rotateX(ar * 2, tm, tm);
-        objs[0].draw(stage, tm);
-
-        ar += 0.001571 * ms;
-        if (ar > radTop) ar -= radTop;
-
-        vr += 0.0016 * ms;
-        if (vr > radTop) vr -= radTop;
-
-        M4x4_rotateZ(vr, M4x4_I, tm);
-
-        V3_mul4x4(tm, pelocation, pev);
-        V3_mul4x4(tm, pedirection, ped);
-        bpe[0].render(stage, pev, ped, ms, 5);
-
-        M4x4_rotateZ(Math.PI, tm, tm);
-        V3_mul4x4(tm, pelocation, pev);
-        V3_mul4x4(tm, pedirection, ped);
-        bpe[1].render(stage, pev, ped, ms, 5);
-
-        renderStage(stage, ctx);
-
-        ctx.globalAlpha = 1;
+        this.bpe.push(new dac3d.particleEngine("images/particle-red.png", Math.PI / 2, 800, 1200));
+        this.bpe.push(new dac3d.particleEngine("images/particle-red.png", Math.PI / 2, 800, 1200));
     }
-})();
+
+    loop = (ct) => {
+        requestAnimationFrame(this.loop);
+
+        let ms = ct - this.lastFrame;
+        this.lastFrame = ct;
+
+        this.ctx.fillStyle = "#000000";
+        this.ctx.fillRect(0, 0, this.ctx.canvas.width, this.ctx.canvas.height);
+
+        this.stage = [];
+
+        dac3d.M4x4_rotateY(this.ar, dac3d.M4x4_I, this.tm);
+        dac3d.M4x4_rotateX(this.ar * 2, this.tm, this.tm);
+        this.objs[0].draw(this.stage, this.tm);
+
+        this.ar += 0.001571 * ms;
+        if (this.ar > this.radTop) this.ar -= this.radTop;
+
+        this.vr += 0.0016 * ms;
+        if (this.vr > this.radTop) this.vr -= this.radTop;
+
+        dac3d.M4x4_rotateZ(this.vr, dac3d.M4x4_I, this.tm);
+
+        dac3d.V3_mul4x4(this.tm, this.pelocation, this.pev);
+        dac3d.V3_mul4x4(this.tm, this.pedirection, this.ped);
+        this.bpe[0].render(this.stage, this.pev, this.ped, ms, 5);
+
+        dac3d.M4x4_rotateZ(Math.PI, this.tm, this.tm);
+        dac3d.V3_mul4x4(this.tm, this.pelocation, this.pev);
+        dac3d.V3_mul4x4(this.tm, this.pedirection, this.ped);
+        this.bpe[1].render(this.stage, this.pev, this.ped, ms, 5);
+
+        dac3d.renderStage(this.stage, this.ctx);
+
+        this.ctx.globalAlpha = 1;
+    }
+
+    //-- entry points ----------------------------
+    onLoad = () => {
+        this.ctx = this.dom.cnvs.getContext("2d");
+
+        dac3d.resizeStage(this.dom.divCanvas, this.ctx);
+
+        this.init();
+
+        requestAnimationFrame(this.loop);
+    }
+
+    onResize = () => {
+        dac3d.resizeStage(this.divCanvas, ctx);
+    }
+}
+
+site.registerPage(page);
