@@ -84,8 +84,8 @@ class page {
 
         this.awingobj.matrixAutoUpdate = false;
 
-        this.light = new THREE.PointLight(0xFFFFFF);
-        this.light.position.set(0, 0, 300);
+        this.light = new THREE.PointLight(0x999999);
+        this.light.position.set(0, 0, 200);
 
         this.scene.add(this.light);
         
