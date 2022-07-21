@@ -11,26 +11,11 @@
     </div>
 
     <div id="divTitlebar">
-        <a href="../"><img src="../images/dac.png" style="border:none;" /></a>
+        <a href="../"><img src="../images/dac.svg" style="border:none;" /></a>
     </div>
 
-    <script id="vertexShader" type="text/plain">
-        attribute vec2 spritePosition; 
-        uniform vec2 screenSize; 
-
-        void main() {
-            vec4 screenTransform = vec4(2.0 / screenSize.x, -2.0 / screenSize.y, -1.0, 1.0);
-            gl_Position = vec4(spritePosition * screenTransform.xy + screenTransform.zw, 1.0, 1.0);
-            gl_PointSize = 48.0;
-        }
-    </script>
-
-    <script id="fragmentShader" type="text/plain">
-        uniform sampler2D spriteTexture;
-
-        void main() {
-            gl_FragColor = texture2D(spriteTexture, gl_PointCoord);
-        }
-    </script>
+    <div id="divLoadingMessage">
+        Loading textures and setting up scene...
+    </div>
 </body>
 </html>

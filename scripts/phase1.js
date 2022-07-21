@@ -198,7 +198,7 @@ class page {
     }
 
     onResize = () => {
-        dac3d.resizeStage(this.dom.divCanvas, ctx);
+        dac3d.resizeStage(this.dom.divCanvas, this.ctx);
     }
 }
 

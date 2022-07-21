@@ -1,6 +1,25 @@
 ﻿import * as site from "./site.js";
 import * as stats from "./stats.js";
 
+const vertexShaderCode = `
+    attribute vec2 spritePosition; 
+    uniform vec2 screenSize; 
+
+    void main() {
+        vec4 screenTransform = vec4(2.0 / screenSize.x, -2.0 / screenSize.y, -1.0, 1.0);
+        gl_Position = vec4(spritePosition * screenTransform.xy + screenTransform.zw, 1.0, 1.0);
+        gl_PointSize = 48.0;
+    }
+`;
+ 
+const fragmentShaderCode = `
+    uniform sampler2D spriteTexture;
+
+    void main() {
+        gl_FragColor = texture2D(spriteTexture, gl_PointCoord);
+    }
+`;
+
 class page {
     stats;
     gl;
@@ -14,8 +33,7 @@ class page {
     dom = {
         divCanvas: null,
         cnvs: null,
-        vertexShader: null,
-        fragmentShader: null
+        divLoadingMessage: null
     };
 
     createShader(gl, type, source) {
@@ -164,12 +182,9 @@ class page {
         });
     }
 
-    init(done) {
-        let vertexShaderSource = this.dom.vertexShader.text;
-        let fragmentShaderSource = this.dom.fragmentShader.text;
-        
-        let vertexShader = this.createShader(this.gl, this.gl.VERTEX_SHADER, vertexShaderSource);
-        let fragmentShader = this.createShader(this.gl, this.gl.FRAGMENT_SHADER, fragmentShaderSource);
+    init(done) {        
+        let vertexShader = this.createShader(this.gl, this.gl.VERTEX_SHADER, vertexShaderCode);
+        let fragmentShader = this.createShader(this.gl, this.gl.FRAGMENT_SHADER, fragmentShaderCode);
 
         this.shaderProgram = this.createProgram(this.gl, vertexShader, fragmentShader);
 
@@ -204,6 +219,8 @@ class page {
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
 
         this.init(() => {
+            this.dom.divLoadingMessage.style.display = "none";
+
             requestAnimationFrame(this.loop);
         });
     }

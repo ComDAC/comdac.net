@@ -4,23 +4,23 @@ const vertexShader = `
   uniform float pointMultiplier;
   attribute float scale;
   attribute float alpha;
- 
+
   varying float alphaToFrag;
- 
+
   void main() {
     vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mvPosition;
     gl_PointSize = pointMultiplier * 1500.0 * scale / gl_Position.w;
- 
+
     alphaToFrag = alpha;
   }
 `;
  
 const fragmentShader = `
   uniform sampler2D diffuseTexture;
- 
+
   varying float alphaToFrag;
- 
+
   void main() {
     gl_FragColor = texture2D(diffuseTexture, gl_PointCoord) * vec4(1.0, 1.0, 1.0, alphaToFrag);
   }

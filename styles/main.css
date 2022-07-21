@@ -14,14 +14,11 @@
     font-family: Arial !important;
 }
 
-#loadingMessage {
+#divLoadingMessage {
     position: absolute;
-    width: 400px;
-    height: 100px;
-    margin-left: -200px;
-    margin-top: -50px;
-    left: 50%;
-    top: 50%;
+    left: 0;
+    right: 0;
+    top: 40%;
     color: White;
     font-size: 12pt;
     font-weight: bold;
@@ -56,13 +53,20 @@
 
 #divTopOptions {
     position: absolute;
-    right: 250px;
+    left:50%;
+    margin-left:-100px;
     top: 5px;
 }
 
-    #divTopOptions td {
-        padding-right: 20px;
+    #divTopOptions > div {
+        display: inline-block;
     }
+
+        #divTopOptions > div > label {
+            display: block;
+            padding-right: 20px;
+            cursor:pointer;
+        }
 
 #canvaserror {
     position: absolute;
@@ -98,8 +102,9 @@ a {
     display: block;
     background: rgba(33, 41, 82, 0.6);
     backdrop-filter: blur(3px);
-    border:solid 3px rgba(33, 41, 82, 1);
+    border: solid 3px rgb(124 126 141);
     border-radius: 8px;
+    box-shadow: 0px 0px 10px 2px rgba(0,0,0,0.75);
     left: 50%;
     top: 50%;
     width: 320px;

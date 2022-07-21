@@ -27,47 +27,23 @@ class page {
 
     particleSpinner;
 
-    loader;
+    particleRed;
+    particleWhite;
 
     spinnerParticle;
     engineParticle;
 
+    dom = {
+        divLoadingMessage: null
+    };
+
     init() {
-        this.loader = new THREE.TextureLoader();
+        const width = window.innerWidth;
+        const height = window.innerHeight;
 
         this.renderer = new THREE.WebGLRenderer({
             antialias: true
         });
-
-        this.stats = stats.init();
-
-        let loadCounter = 0;
-
-        loadCounter++;        
-        new GLTFLoader().load("../models/awing.glb", (glb) => {
-            this.awing = glb.scene;
-
-            loadCounter--;
-
-            if (loadCounter === 0) {
-                this.loadComplete();
-            }
-        });
-    }
-
-    makeCube(size, col, x = 0, y = 0, z = 0) {
-        const geometry = new THREE.BoxGeometry( size, size, size );
-        const material = new THREE.MeshBasicMaterial( { color: col } );
-        const cube = new THREE.Mesh( geometry, material );
-
-        cube.position.set(x, y, z);
-
-        return cube;
-    }
-
-    loadComplete() {
-        const width = window.innerWidth;
-        const height = window.innerHeight;
 
         this.scene = new THREE.Scene();
 
@@ -99,10 +75,6 @@ class page {
         this.awing.rotation.z = -0.04;
         this.awingobj.add(this.awing);
 
-        //for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {            
-        //    this.awingobj.add(this.makeCube(2, 0x00FF00, this.awingEnginePosCords[i],this.awingEnginePosCords[i+1],this.awingEnginePosCords[i+2]));
-        //}
-
         this.awingobj.position.x = 20;
         this.awingobj.rotation.x = -Math.PI / 2;
         this.awingobj.rotation.z = Math.PI / 2;
@@ -125,8 +97,6 @@ class page {
             this.pointLights[i] = new THREE.PointLight(0xFF9999);
             this.pointLights[i].position.set(lights[i], 0, 0);
             this.particleSpinner.add(this.pointLights[i]);
-
-            //this.particleSpinner.add(this.makeCube(2, 0xFF0000, lights[i], 0, 0));
         }
 
         this.particleSpinner.matrixAutoUpdate = false;
@@ -134,27 +104,22 @@ class page {
         this.scene.add(this.particleSpinner);
 
         //particle engine initialization.
-        const particleWhite = this.loader.load("../images/particle-white.png");
-        particleWhite.flipY = false;
-        
-        const particleRed = this.loader.load("../images/particle-red.png");
-        particleRed.flipY = false;
-
-        this.spinnerParticle = new particles.ExpelParticleSystem(particleRed, width, height, THREE.AdditiveBlending);
+        this.spinnerParticle = new particles.ExpelParticleSystem(this.particleRed, width, height, THREE.AdditiveBlending);
         this.scene.add(this.spinnerParticle.mesh);
 
-        this.engineParticle = new particles.ExpelParticleSystem(particleWhite, width, height, THREE.AdditiveBlending);
+        this.engineParticle = new particles.ExpelParticleSystem(this.particleWhite, width, height, THREE.AdditiveBlending);
         this.scene.add(this.engineParticle.mesh);
 
-        //initialize viewport
-        
+        //initialize viewport        
         this.renderer.setSize(window.innerWidth, window.innerHeight);
 
         document.body.appendChild(this.renderer.domElement);
 
         this.onResize();
 
-        requestAnimationFrame(this.animate);
+        this.dom.divLoadingMessage.style.display = "none";
+
+        requestAnimationFrame(this.loop);
     }
 
     render(tm) {
@@ -212,7 +177,27 @@ class page {
 
     //--background stuff
     onLoad = () => {
-        this.init();
+        this.stats = stats.init();
+
+        let loadCounter = 3;
+      
+        new GLTFLoader().load("../models/awing.glb", (glb) => {
+            this.awing = glb.scene;
+
+            if (--loadCounter === 0) this.init();
+        });
+      
+        new THREE.TextureLoader().load("../images/particle-white.png", (texture) => {
+            this.particleWhite = texture;
+
+            if (--loadCounter === 0) this.init();
+        });
+      
+        new THREE.TextureLoader().load("../images/particle-red.png", (texture) => {
+            this.particleRed = texture;
+
+            if (--loadCounter === 0) this.init();
+        });
     }
 
     onResize = () => {
@@ -230,8 +215,8 @@ class page {
         this.renderer.setSize(width, height);
     }
 
-    animate = (tm) => {
-        requestAnimationFrame(this.animate);
+    loop = (tm) => {
+        requestAnimationFrame(this.loop);
 
         this.controls.update();
 
