@@ -1,124 +1,9 @@
 ﻿import * as site from "./site.js";
 import * as stats from "./stats.js";
 import * as THREE from "three";
+import * as particles from "./dacparticles.js";
 import { GLTFLoader } from "GTFLoader";
-import { TrackballControls } from './TrackballControls.js';
-
-
-
-const vertexShader = `
-  uniform float pointMultiplier;
-  attribute float scale;
-  attribute float alpha;
- 
-  varying float alphaToFrag;
- 
-  void main() {
-    vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-    gl_Position = projectionMatrix * mvPosition;
-    gl_PointSize = pointMultiplier * 1500.0 * scale / gl_Position.w;
- 
-    alphaToFrag = alpha;
-  }
-`;
- 
-const fragmentShader = `
-  uniform sampler2D diffuseTexture;
- 
-  varying float alphaToFrag;
- 
-  void main() {
-    gl_FragColor = texture2D(diffuseTexture, gl_PointCoord) * vec4(1.0, 1.0, 1.0, alphaToFrag);
-  }
-`;
- 
-class ParticleSystem {
-  constructor (texture, emit_every, particle_life) {
-    this.texture = texture;
-    this.emit_every = emit_every;
-    this.particle_life = particle_life;
-    this.last_emission = 0;
- 
-    this.geometry = new THREE.BufferGeometry();
-    this.particles = [];
-    this.material = new THREE.ShaderMaterial({
-      uniforms: {
-        diffuseTexture: { value: texture },
-        pointMultiplier: { value: window.innerHeight / window.innerWidth }
-      },
-      vertexShader,
-      fragmentShader,
-      blending: THREE.NormalBlending,
-      depthTest: true,
-      depthWrite: false,
-      transparent: true,
-      vertexColors: true,
-    });
- 
-    this.mesh = new THREE.Points(this.geometry, this.material);
-    this.clock = new THREE.Clock();
-  }
- 
-  setPosition(position) {
-    this.mesh.position.x = position.x;
-    this.mesh.position.y = position.y;
-    this.mesh.position.z = position.z;
-  }
- 
-  getMesh() {
-    return this.mesh;
-  }
- 
-  updateAspect() {
-    this.material.uniforms.pointMultiplier.value = window.innerHeight / window.innerWidth;
-  }
- 
-  spawn() {
-    this.particles.push({
-      position: [0, 0, 0],
-      scale: 1,
-      alpha: 1,
-      spawnTime: this.clock.elapsedTime,
-    });
- 
-    this.last_emission = this.clock.elapsedTime;
-  }
- 
-  update() {
-    const elapsedTime = this.clock.getElapsedTime();
- 
-    this.particles = this.particles.filter((particle) => elapsedTime - particle.spawnTime < this.particle_life);
- 
-    if (elapsedTime - this.last_emission >= this.emit_every) {
-      this.spawn();
-    }
- 
-    this.geometry.setAttribute("position", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.position).flat(), 3));
-    this.geometry.setAttribute("scale", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.scale).flat(), 1));
-    this.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.alpha).flat(), 1));
-    this.geometry.attributes.position.needsUpdate = true;
-    this.geometry.attributes.scale.needsUpdate = true;
-  }
-}
-
-class ExpelParticleSystem extends ParticleSystem {
-    spawn() {
-      super.spawn();
-      //this.particles[this.particles.length - 1].dartX = Math.random() * 0.005 * (Math.random() > 0.5 ? 1 : -1 );
-      //this.particles[this.particles.length - 1].dartZ = Math.random() * 0.005 * (Math.random() > 0.5 ? 1 : -1 );
-    }
-   
-    update() {
-      const elapsedTime = this.clock.getElapsedTime();
-
-      for (let i = 0; i < this.particles.length; i++) {
-        this.particles[i].position[1] += 0.1;
-        this.particles[i].alpha = 1 - Math.max((elapsedTime - this.particles[i].spawnTime) / this.particle_life, 0);
-      }
-   
-      super.update();
-    }
-}
+import { TrackballControls } from "TrackballControls";
 
 class page {
     stats;
@@ -144,8 +29,8 @@ class page {
 
     loader;
 
-    particleTest;
-    particleTest2;
+    spinnerParticle;
+    engineParticle;
 
     init() {
         this.loader = new THREE.TextureLoader();
@@ -181,9 +66,12 @@ class page {
     }
 
     loadComplete() {
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+
         this.scene = new THREE.Scene();
 
-        this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 10000);
+        this.camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 10000);
 
         this.camera.position.z = 40;
 
@@ -211,9 +99,9 @@ class page {
         this.awing.rotation.z = -0.04;
         this.awingobj.add(this.awing);
 
-        for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {            
-            this.awingobj.add(this.makeCube(2, 0x00FF00, this.awingEnginePosCords[i],this.awingEnginePosCords[i+1],this.awingEnginePosCords[i+2]));
-        }
+        //for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {            
+        //    this.awingobj.add(this.makeCube(2, 0x00FF00, this.awingEnginePosCords[i],this.awingEnginePosCords[i+1],this.awingEnginePosCords[i+2]));
+        //}
 
         this.awingobj.position.x = 20;
         this.awingobj.rotation.x = -Math.PI / 2;
@@ -238,30 +126,25 @@ class page {
             this.pointLights[i].position.set(lights[i], 0, 0);
             this.particleSpinner.add(this.pointLights[i]);
 
-            this.particleSpinner.add(this.makeCube(2, 0xFF0000, lights[i], 0, 0));
+            //this.particleSpinner.add(this.makeCube(2, 0xFF0000, lights[i], 0, 0));
         }
 
         this.particleSpinner.matrixAutoUpdate = false;
         
         this.scene.add(this.particleSpinner);
 
-        //particle test.
+        //particle engine initialization.
         const particleWhite = this.loader.load("../images/particle-white.png");
         particleWhite.flipY = false;
-
-        this.particleTest = new ExpelParticleSystem(particleWhite, 0.06, 2.7);
-        this.particleTest.setPosition(new THREE.Vector3(-5,0,0));
-
-        this.scene.add(this.particleTest.getMesh());
-
         
         const particleRed = this.loader.load("../images/particle-red.png");
         particleRed.flipY = false;
 
-        this.particleTest2 = new ExpelParticleSystem(particleRed, 0.08, 2.3);
-        this.particleTest2.setPosition(new THREE.Vector3(5,0,0));
+        this.spinnerParticle = new particles.ExpelParticleSystem(particleRed, width, height, THREE.AdditiveBlending);
+        this.scene.add(this.spinnerParticle.mesh);
 
-        this.scene.add(this.particleTest2.getMesh());
+        this.engineParticle = new particles.ExpelParticleSystem(particleWhite, width, height, THREE.AdditiveBlending);
+        this.scene.add(this.engineParticle.mesh);
 
         //initialize viewport
         
@@ -277,7 +160,6 @@ class page {
     render(tm) {
         const deltaTime = tm - this.lastFrameTime;
         this.lastFrameTime = tm;
-
         //do delta stuff here.
 
         this.awingpivot.rotation.y += 0.0012 * deltaTime;
@@ -289,16 +171,40 @@ class page {
         this.awingobj.updateMatrix();
         this.particleSpinner.updateMatrix();
 
+        const engineSpray = Math.PI * 0.1;
+
+        const engineVel = new THREE.Vector3(-100,0,0);
+        engineVel.applyMatrix4(this.awingobj.matrixWorld);
+        engineVel.setLength(0.008);
+
         for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {            
             this.awingEnginePos[i].set(this.awingEnginePosCords[i],this.awingEnginePosCords[i+1],this.awingEnginePosCords[i+2]);
-
             this.awingEnginePos[i].applyMatrix4(this.awingobj.matrixWorld);
 
-            //engine pos now has proper world position for particle system.
+            for(let p=0; p<5; p++) {
+              this.engineParticle.spawn(tm, engineSpray, 50, 80, this.awingEnginePos[i], engineVel, 2);
+            }
         }
 
-        this.particleTest.update();
-        this.particleTest2.update();
+        this.engineParticle.update(tm, deltaTime);
+
+        //spinner particles.
+        const spinnerPos = [new THREE.Vector3(25,0,0),new THREE.Vector3(-25,0,0)];
+        const spinnerVel = [new THREE.Vector3(0,-100,0),new THREE.Vector3(0,100,0)];
+        const spinnerSpray = Math.PI * 0.25;
+
+        for(let i=0; i<spinnerPos.length; i++) {
+          spinnerPos[i].applyMatrix4(this.particleSpinner.matrixWorld);
+          spinnerVel[i].applyMatrix4(this.particleSpinner.matrixWorld);
+
+          spinnerVel[i].setLength(0.03);
+
+          for(let p=0; p<25; p++) {
+            this.spinnerParticle.spawn(tm, spinnerSpray, 500, 1300, spinnerPos[i], spinnerVel[i], 2);
+          }
+        }
+
+        this.spinnerParticle.update(tm, deltaTime);
 
         //render final scene
         this.renderer.render(this.scene, this.camera);
@@ -312,10 +218,9 @@ class page {
     onResize = () => {
         const width = window.innerWidth;
         const height = window.innerHeight;
-
         
-        this.particleTest.updateAspect();
-        this.particleTest2.updateAspect();
+        this.spinnerParticle.updateAspect(width, height);
+        this.engineParticle.updateAspect(width, height);
 
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
