@@ -77,8 +77,8 @@ class page {
 
         this.tardisobj.matrixAutoUpdate = false;
 
-        this.light = new THREE.PointLight(0x999999);
-        this.light.position.set(0, 0, 200);
+        this.light = new THREE.PointLight(0xFFFFFF);
+        this.light.position.set(0, 0, 300);
 
         this.scene.add(this.light);
         
@@ -131,19 +131,20 @@ class page {
         this.particleSpinner.updateMatrix();
 
         //spinner particles.
-        const spinnerPos = [new THREE.Vector3(25,0,0),new THREE.Vector3(-25,0,0)];
-        const spinnerVel = [new THREE.Vector3(0,-100,0),new THREE.Vector3(0,100,0)];
+        const spinnerPos = [new THREE.Vector3(25,0,0), new THREE.Vector3(-25,0,0), new THREE.Vector3(0,25,0), new THREE.Vector3(0,-25,0)];
+        const spinnerVel = [new THREE.Vector3(0,-100,0), new THREE.Vector3(0,100,0), new THREE.Vector3(0,0,-100),new THREE.Vector3(0,0,100)];
         const spinnerSpray = Math.PI * 0.25;
+        const spinnerEmission = Math.floor(deltaTime * 1.5);
 
-        for(let i=0; i<spinnerPos.length; i++) {
-          spinnerPos[i].applyMatrix4(this.particleSpinner.matrixWorld);
-          spinnerVel[i].applyMatrix4(this.particleSpinner.matrixWorld);
+        for(let i = 0; i < spinnerPos.length; i++) {
+            spinnerPos[i].applyMatrix4(this.particleSpinner.matrixWorld);
+            spinnerVel[i].applyMatrix4(this.particleSpinner.matrixWorld);
 
-          spinnerVel[i].setLength(0.03);
+            spinnerVel[i].setLength(0.03);
 
-          for(let p=0; p<25; p++) {
-            this.spinnerParticle.spawn(tm, spinnerSpray, 500, 1300, spinnerPos[i], spinnerVel[i], 2);
-          }
+            for(let p = 0; p < spinnerEmission; p++) {
+                this.spinnerParticle.spawn(tm, spinnerSpray, 500, 1300, spinnerPos[i], spinnerVel[i], 2);
+            }
         }
 
         this.spinnerParticle.update(tm, deltaTime);
@@ -156,16 +157,10 @@ class page {
     onLoad = () => {
         this.stats = stats.init();
 
-        let loadCounter = 3;
+        let loadCounter = 2;
       
         new GLTFLoader().load("../models/tardis.glb", (glb) => {
             this.tardis = glb.scene;
-
-            if (--loadCounter === 0) this.init();
-        });
-      
-        new THREE.TextureLoader().load("../images/particle-white.png", (texture) => {
-            this.particleWhite = texture;
 
             if (--loadCounter === 0) this.init();
         });

@@ -138,16 +138,18 @@ class page {
 
         const engineSpray = Math.PI * 0.1;
 
-        const engineVel = new THREE.Vector3(-100,0,0);
+        const engineVel = new THREE.Vector3(-100,-20,-20);
         engineVel.applyMatrix4(this.awingobj.matrixWorld);
         engineVel.setLength(0.008);
+
+        const engineEmission = Math.floor(deltaTime * 0.35);
 
         for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {            
             this.awingEnginePos[i].set(this.awingEnginePosCords[i],this.awingEnginePosCords[i+1],this.awingEnginePosCords[i+2]);
             this.awingEnginePos[i].applyMatrix4(this.awingobj.matrixWorld);
 
-            for(let p=0; p<5; p++) {
-              this.engineParticle.spawn(tm, engineSpray, 50, 80, this.awingEnginePos[i], engineVel, 2);
+            for(let p = 0; p < engineEmission; p++) {
+              this.engineParticle.spawn(tm, engineSpray, 50, 150, this.awingEnginePos[i], engineVel, 2);
             }
         }
 
@@ -157,6 +159,7 @@ class page {
         const spinnerPos = [new THREE.Vector3(25,0,0),new THREE.Vector3(-25,0,0)];
         const spinnerVel = [new THREE.Vector3(0,-100,0),new THREE.Vector3(0,100,0)];
         const spinnerSpray = Math.PI * 0.25;
+        const spinnerEmission = Math.floor(deltaTime * 1.5);
 
         for(let i=0; i<spinnerPos.length; i++) {
           spinnerPos[i].applyMatrix4(this.particleSpinner.matrixWorld);
@@ -164,7 +167,7 @@ class page {
 
           spinnerVel[i].setLength(0.03);
 
-          for(let p=0; p<25; p++) {
+          for(let p = 0; p < spinnerEmission; p++) {
             this.spinnerParticle.spawn(tm, spinnerSpray, 500, 1300, spinnerPos[i], spinnerVel[i], 2);
           }
         }
