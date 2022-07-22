@@ -19,11 +19,6 @@ class page {
     awingpivot;
     awingobj;
     awingEnginePosCords = [-4.7, 2.5, 0, -4.7,-2.5, 0];
-    awingEnginePos = [2];
-
-    light;
-
-    pointLights = [2];
 
     particleSpinner;
 
@@ -63,9 +58,6 @@ class page {
 
         this.awingpivot = new THREE.Object3D();
         this.awingobj = new THREE.Object3D();
-        for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {  
-            this.awingEnginePos[i] = new THREE.Vector3();
-        }
 
         this.awingpivot.position.set(0, 0, 0);
         this.awingpivot.rotation.y = 1;
@@ -84,19 +76,24 @@ class page {
 
         this.awingobj.matrixAutoUpdate = false;
 
-        this.light = new THREE.PointLight(0x999999);
-        this.light.position.set(0, 0, 200);
+        //scene light
+        const light = new THREE.PointLight(0x999999);
 
-        this.scene.add(this.light);
+        light.position.set(0, 0, 200);
+
+        this.scene.add(light);
         
         this.particleSpinner = new THREE.Object3D();
 
+        //spinner lights
         const lights = [25, -25];
 
         for(let i=0; i<lights.length; i++) {
-            this.pointLights[i] = new THREE.PointLight(0xFF9999);
-            this.pointLights[i].position.set(lights[i], 0, 0);
-            this.particleSpinner.add(this.pointLights[i]);
+            const pointLight = new THREE.PointLight(0xFF9999);
+
+            pointLight.position.set(lights[i], 0, 0);
+
+            this.particleSpinner.add(pointLight);
         }
 
         this.particleSpinner.matrixAutoUpdate = false;
@@ -145,11 +142,11 @@ class page {
         const engineEmission = Math.min(Math.floor(deltaTime * 0.35), 5);
 
         for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {            
-            this.awingEnginePos[i].set(this.awingEnginePosCords[i],this.awingEnginePosCords[i+1],this.awingEnginePosCords[i+2]);
-            this.awingEnginePos[i].applyMatrix4(this.awingobj.matrixWorld);
+            const enginePos = new THREE.Vector3(this.awingEnginePosCords[i], this.awingEnginePosCords[i + 1], this.awingEnginePosCords[i + 2]);
+            enginePos.applyMatrix4(this.awingobj.matrixWorld);
 
             for(let p = 0; p < engineEmission; p++) {
-              this.engineParticle.spawn(tm, engineSpray, 50, 150, this.awingEnginePos[i], engineVel, 2);
+              this.engineParticle.spawn(tm, engineSpray, 50, 150, enginePos, engineVel, 2);
             }
         }
 

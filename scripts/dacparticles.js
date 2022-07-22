@@ -28,7 +28,7 @@ const fragmentShader = `
  
 class ParticleSystem {
   texture;
-  particles = [];
+  particles = new Array();
   geometry;
   material;
   mesh;

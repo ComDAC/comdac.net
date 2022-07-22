@@ -19,14 +19,9 @@ class page {
     tardispivot;
     tardisobj;
 
-    light;
-
-    pointLights = [2];
-
     particleSpinner;
 
     particleRed;
-    particleWhite;
 
     spinnerParticle;
 
@@ -62,7 +57,7 @@ class page {
         this.tardisobj = new THREE.Object3D();
 
         this.tardispivot.position.set(0, 0, 0);
-        this.tardispivot.rotation.y = 1;
+        this.tardispivot.rotation.y = 0.7;
         this.scene.add(this.tardispivot);
 
         this.tardis.rotation.x = (Math.PI / 2);
@@ -77,19 +72,22 @@ class page {
 
         this.tardisobj.matrixAutoUpdate = false;
 
-        this.light = new THREE.PointLight(0xFFFFFF);
-        this.light.position.set(0, 0, 300);
+        //scene light
+        const light = new THREE.PointLight(0xFFFFFF);
 
-        this.scene.add(this.light);
+        light.position.set(0, 0, 300);
+
+        this.scene.add(light);
         
         this.particleSpinner = new THREE.Object3D();
 
-        const lights = [25, -25];
+        const lights = [25,0,0, -25,0,0, 0,25,0, 0,-25,0];
 
-        for(let i=0; i<lights.length; i++) {
-            this.pointLights[i] = new THREE.PointLight(0xFF9999);
-            this.pointLights[i].position.set(lights[i], 0, 0);
-            this.particleSpinner.add(this.pointLights[i]);
+        for(let i=0; i<lights.length - 2; i+=3) {
+            let pointLight = new THREE.PointLight(0xFF9999);
+            pointLight.position.set(lights[i], lights[i + 1], lights[i + 2]);
+
+            this.particleSpinner.add(pointLight);
         }
 
         this.particleSpinner.matrixAutoUpdate = false;

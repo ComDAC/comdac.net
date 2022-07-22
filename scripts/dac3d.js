@@ -49,8 +49,9 @@ export function renderStage(stage, ctx) {
                 case 1:
                     ctx.globalAlpha = poly.alpha;
                     const mul = scale * poly.scale;
-                    const shift = (poly.sprite.hd * mul) | 0;
-                    const dim = (poly.sprite.d * mul) | 0;
+                    const shift = Math.floor(poly.sprite.hd * mul);
+                    const dim = Math.floor(poly.sprite.d * mul);
+
                     ctx.drawImage(poly.sprite.img, poly.point[0] - shift, poly.point[1] - shift, dim, dim);
                     break;
             }
@@ -69,10 +70,11 @@ function colorLuminance(hex, lum) {
     lum = lum || 0;
     // convert to decimal and change luminosity  
     let rgb = "#";
+
     for (let i = 0; i < 3; i++) {
         const c = parseInt(hex.substr(i * 2, 2), 16);
-        const chex = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
-        rgb += chex.padStart(2, "0");
+
+        rgb += Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16).padStart(2, "0");
     }
 
     return rgb;
