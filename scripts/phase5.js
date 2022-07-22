@@ -134,7 +134,7 @@ class page {
         const spinnerPos = [new THREE.Vector3(25,0,0), new THREE.Vector3(-25,0,0), new THREE.Vector3(0,25,0), new THREE.Vector3(0,-25,0)];
         const spinnerVel = [new THREE.Vector3(0,-100,0), new THREE.Vector3(0,100,0), new THREE.Vector3(0,0,-100),new THREE.Vector3(0,0,100)];
         const spinnerSpray = Math.PI * 0.25;
-        const spinnerEmission = Math.floor(deltaTime * 1.5);
+        const spinnerEmission = Math.min(Math.floor(deltaTime * 1.55), 25);
 
         for(let i = 0; i < spinnerPos.length; i++) {
             spinnerPos[i].applyMatrix4(this.particleSpinner.matrixWorld);

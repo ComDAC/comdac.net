@@ -142,7 +142,7 @@ class page {
         engineVel.applyMatrix4(this.awingobj.matrixWorld);
         engineVel.setLength(0.008);
 
-        const engineEmission = Math.floor(deltaTime * 0.35);
+        const engineEmission = Math.min(Math.floor(deltaTime * 0.35), 5);
 
         for(let i = 0; i < this.awingEnginePosCords.length; i+=3) {            
             this.awingEnginePos[i].set(this.awingEnginePosCords[i],this.awingEnginePosCords[i+1],this.awingEnginePosCords[i+2]);
@@ -159,7 +159,7 @@ class page {
         const spinnerPos = [new THREE.Vector3(25,0,0),new THREE.Vector3(-25,0,0)];
         const spinnerVel = [new THREE.Vector3(0,-100,0),new THREE.Vector3(0,100,0)];
         const spinnerSpray = Math.PI * 0.25;
-        const spinnerEmission = Math.floor(deltaTime * 1.5);
+        const spinnerEmission = Math.min(Math.floor(deltaTime * 1.55), 25);
 
         for(let i=0; i<spinnerPos.length; i++) {
           spinnerPos[i].applyMatrix4(this.particleSpinner.matrixWorld);
