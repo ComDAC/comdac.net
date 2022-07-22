@@ -56,7 +56,7 @@ class page {
 
         this.stats.begin();
 
-        let ms = ct - this.lastFrame;
+        const ms = ct - this.lastFrame;
         this.lastFrame = ct;
 
         this.ctx.fillStyle = "#000000";
@@ -64,7 +64,7 @@ class page {
 
         this.stage = [];
 
-        dac3d.M4x4_clone(dac3d.M4x4_I, this.tm);
+        this.tm = dac3d.M4x4_clone(dac3d.M4x4_I);
 
         //translate ship
         dac3d.M4x4_rotate(this.ar2, this.caxis, this.tm, this.tm);

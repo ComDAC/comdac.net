@@ -76,7 +76,7 @@ class page {
         
         this.stats.begin();
 
-        let ms = ct - this.lastFrame;
+        const ms = ct - this.lastFrame;
         this.lastFrame = ct;
 
         this.ctx.fillStyle = "#000000";
