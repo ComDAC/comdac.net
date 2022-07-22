@@ -162,29 +162,12 @@ class page {
     //-- entry points ----------------------------
 
     onLoad = () => {
-        this.dom.cbRedCube.addEventListener("change", (e) => {
-            this.showRedCube = e.target.checked;
-        });
-        
-        this.dom.cbGreenCube.addEventListener("change", (e) => {
-            this.showGreenCube = e.target.checked;
-        });
-        
-        this.dom.cbBlueStar.addEventListener("change", (e) => {
-            this.showBlueStar = e.target.checked;
-        });
-        
-        this.dom.cbTorus.addEventListener("change", (e) => {
-            this.showTorus = e.target.checked;
-        });
-        
-        this.dom.cbTorusParticles.addEventListener("change", (e) => {
-            this.showTorusParticles = e.target.checked;
-        });
-        
-        this.dom.cbRotator.addEventListener("change", (e) => {
-            this.showRotator = e.target.checked;
-        });
+        this.dom.cbRedCube.addEventListener("change", (e) => this.showRedCube = e.target.checked);        
+        this.dom.cbGreenCube.addEventListener("change", (e) => this.showGreenCube = e.target.checked);        
+        this.dom.cbBlueStar.addEventListener("change", (e) => this.showBlueStar = e.target.checked);        
+        this.dom.cbTorus.addEventListener("change", (e) => this.showTorus = e.target.checked);        
+        this.dom.cbTorusParticles.addEventListener("change", (e) => this.showTorusParticles = e.target.checked);        
+        this.dom.cbRotator.addEventListener("change", (e) => this.showRotator = e.target.checked);
 
         this.stats = stats.init();
  
