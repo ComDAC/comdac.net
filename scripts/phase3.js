@@ -37,12 +37,12 @@ class page {
     };
 
     createShader(gl, type, source) {
-        let shader = gl.createShader(type);
+        const shader = gl.createShader(type);
 
         gl.shaderSource(shader, source);
         gl.compileShader(shader);
 
-        let success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+        const success = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
 
         if (success) {
           return shader;
@@ -53,13 +53,13 @@ class page {
     }
 
     createProgram(gl, vertexShader, fragmentShader) {
-        let program = gl.createProgram();
+        const program = gl.createProgram();
 
         gl.attachShader(program, vertexShader);
         gl.attachShader(program, fragmentShader);
         gl.linkProgram(program);
 
-        let success = gl.getProgramParameter(program, gl.LINK_STATUS);
+        const success = gl.getProgramParameter(program, gl.LINK_STATUS);
 
         if (success) {
           return program;
@@ -142,7 +142,7 @@ class page {
         
         this.processBalls(ms);
 
-        let points = new Float32Array(this.balls.length * 2);
+        const points = new Float32Array(this.balls.length * 2);
 
         this.balls.forEach((b, i) => {
             points[i*2] = Math.round(b.x);
@@ -153,7 +153,7 @@ class page {
 
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-        for (let i =0; i<this.glTexture.length; i++) {            
+        for (let i = 0; i < this.glTexture.length; i++) {            
             this.gl.bindTexture(this.gl.TEXTURE_2D, this.glTexture[i]);
 
             this.gl.drawArrays(this.gl.POINTS, i * this.ballMul, this.ballMul);
@@ -168,7 +168,7 @@ class page {
         this.textureFiles.forEach((tf, i) => {
             loadCounter++;
 
-            let img = new Image();
+            const img = new Image();
             img.src = tf;
 
             img.onload = () => {
@@ -183,8 +183,8 @@ class page {
     }
 
     init(done) {        
-        let vertexShader = this.createShader(this.gl, this.gl.VERTEX_SHADER, vertexShaderCode);
-        let fragmentShader = this.createShader(this.gl, this.gl.FRAGMENT_SHADER, fragmentShaderCode);
+        const vertexShader = this.createShader(this.gl, this.gl.VERTEX_SHADER, vertexShaderCode);
+        const fragmentShader = this.createShader(this.gl, this.gl.FRAGMENT_SHADER, fragmentShaderCode);
 
         this.shaderProgram = this.createProgram(this.gl, vertexShader, fragmentShader);
 

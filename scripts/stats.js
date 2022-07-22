@@ -131,7 +131,6 @@ class Panel {
 			dom: canvas,
 
 			update: function (value, maxValue) {
-
 				min = Math.min(min, value);
 				max = Math.max(max, value);
 

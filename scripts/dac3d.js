@@ -23,33 +23,24 @@ export function resizeStage(canvas, ctx) {
     yzero = (height / 2) | 0;
 }
 
-function stageSort(a, b) {
-    return a.z - b.z;
-}
-
 export function renderStage(stage, ctx) {
-    let s = stage.sort(stageSort).length;
-
-    while (s--) {
-        let poly = stage[s];
-        let point;
-
+    stage.sort((a,b) => b.z - a.z).forEach((poly) => {
         if (poly.z > wall) {
             switch (poly.type) {
                 case 0:
                     ctx.globalAlpha = 1;
-                    ctx.fillStyle = ctx.strokeStyle = poly.col;
+                    ctx.fillStyle = poly.col;
+                    ctx.strokeStyle = poly.col;
 
-                    let points = poly.points;
                     ctx.beginPath();
 
-                    let p = poly.len - 1;
-                    point = points[p];
-                    ctx.moveTo(point[0], point[1]);
-                    while (p--) {
-                        point = points[p];
-                        ctx.lineTo(point[0], point[1]);
-                    }
+                    poly.points.forEach((point, i) => {
+                        if (i===0) {
+                            ctx.moveTo(point[0], point[1]);
+                        } else {
+                            ctx.lineTo(point[0], point[1]);
+                        }
+                    });
 
                     ctx.fill();
                     ctx.stroke();
@@ -57,324 +48,346 @@ export function renderStage(stage, ctx) {
 
                 case 1:
                     ctx.globalAlpha = poly.alpha;
-                    point = poly.point;
-                    let sprite = poly.sprite;
-                    let mul = scale * poly.scale;
-                    let shift = (sprite.hd * mul) | 0;
-                    let dim = (sprite.d * mul) | 0;
-                    ctx.drawImage(sprite.img, point[0] - shift, point[1] - shift, dim, dim);
+                    const mul = scale * poly.scale;
+                    const shift = (poly.sprite.hd * mul) | 0;
+                    const dim = (poly.sprite.d * mul) | 0;
+                    ctx.drawImage(poly.sprite.img, poly.point[0] - shift, poly.point[1] - shift, dim, dim);
                     break;
             }
         }
-    }
+    });
 }
 
 function colorLuminance(hex, lum) {
     // validate hex string  
     hex = String(hex).replace(/[^0-9a-f]/gi, '');
+
     if (hex.length < 6) {
         hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
     }
 
     lum = lum || 0;
     // convert to decimal and change luminosity  
-    let rgb = "#", c, i;
-    for (i = 0; i < 3; i++) {
-        c = parseInt(hex.substr(i * 2, 2), 16);
-        c = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
-        rgb += ("00" + c).substr(c.length);
+    let rgb = "#";
+    for (let i = 0; i < 3; i++) {
+        const c = parseInt(hex.substr(i * 2, 2), 16);
+        const chex = Math.round(Math.min(Math.max(0, c + (c * lum)), 255)).toString(16);
+        rgb += chex.padStart(2, "0");
     }
 
     return rgb;
 }
 
 function convert2d(point, r) {
-    let zp = perspectiveScale / (point[2] + zzero);
+    const zp = perspectiveScale / (point[2] + zzero);
     r[0] = (point[0] * zp + xzero) | 0;
     r[1] = (point[1] * zp + yzero) | 0;
 }
 
 //-- 3D Object Handler Object --------------------------------------------------------------------
 
-let colsteps = 48;
-let colmul = (colsteps - 0.0001) / (Math.PI / 2);
+const colsteps = 48;
+const colmul = (colsteps - 0.0001) / (Math.PI / 2);
 
-export function object3d(object, size) {
-    let _i, _p;
-    let _pts = [];
+export class object3d {
+    pts = [];
+    polys;
+    cols;
+    pt;
+    pt3d;
+    pgr;
 
-    for (_i = 0; _i < (object[0].length - 2) ; _i += 3) {
-        _pts.push([object[0][_i] * size, object[0][_i + 1] * size, object[0][_i + 2] * size]);
-    }
+    constructor(object, size) {
+        this.polys = object[1];
 
-    let _polys = object[1];
-    let _cols = new Array(object[2].length);
-    let _pt = new Array(_pts.length);
-    let _pt3d = new Array(_pts.length);
-    let _poly;
-    let _pp;
-    let _pc;
-    let _pgr = new Array(_polys.length);
-    let _a, _z;
-    let _norm = new Array(3);
-    let _pg;
-    let _plen = _polys.length;
-    let _ptlen = _pts.length;
-
-    for (_i = 0; _i < _cols.length; _i++) {
-        _cols[_i] = new Array(colsteps);
-        for (_p = 0; _p < colsteps; _p++) {
-            _cols[_i][_p] = colorLuminance(object[2][_i], (((colsteps - _p) / colsteps) - 1) / 1.2);
+        for (let i = 0; i < (object[0].length - 2); i += 3) {
+            this.pts.push([object[0][i] * size, object[0][i + 1] * size, object[0][i + 2] * size]);
         }
-    }
 
-    for (_i = 0; _i < _pgr.length; _i++) {
-        _pgr[_i] = { "type": 0, "len": _polys[_i].length - 1, "points": [], "col": "ffffff", "z": 0 };
-        _p = _polys[_i].length - 1;
-        _polys[_i][_p] = _cols[_polys[_i][_p]];
-        _p--;
-        while (_p--) {
-            _pgr[_i].points[_p] = new Array(2);
-        }
-    }
+        this.cols = new Array(object[2].length);
+        this.pt = new Array(this.pts.length);
+        this.pt3d = new Array(this.pts.length);
+        this.pgr = new Array(this.polys.length);
 
-    _i = _pts.length;
-    while (_i--) {
-        _pt[_i] = new Array(2);
-        _pt3d[_i] = new Array(3);
-    }
+        for (let i = 0; i < this.cols.length; i++) {
+            this.cols[i] = new Array(colsteps);
 
-    //main rendering routines to perform transformations and then add polygons to the stage for rendering
-    this.draw = function (s, m) {
-        _i = _ptlen;
-        while (_i--) convert2d(V3_mul4x4(m, _pts[_i], _pt3d[_i]), _pt[_i]);
-
-        _i = _plen;
-        while (_i--) {
-            _poly = _polys[_i];
-
-            V3_normal(_pt3d[_poly[1]], _pt3d[_poly[0]], _pt3d[_poly[2]], _norm);
-
-            _z = _norm[2];
-
-            if (_z > 0) {
-                _pg = _pgr[_i];
-
-                _a = Math.min((colmul * Math.acos(_z / V3_length(_norm))) | 0, colsteps - 1);
-
-                _p = _pg.len;
-                _pg.col = _poly[_p][_a];
-                _z = 0;
-                while (_p--) {
-                    _pp = _poly[_p];
-                    _pg.points[_p] = _pt[_pp];
-                    _z += _pt3d[_pp][2]
-                }
-
-                _pg.z = _z / _pg.len;
-
-                s.push(_pg);
+            for (let p = 0; p < colsteps; p++) {
+                this.cols[i][p] = colorLuminance(object[2][i], (((colsteps - p) / colsteps) - 1) / 1.2);
             }
         }
+
+        for (let i = 0; i < this.pgr.length; i++) {
+            this.pgr[i] = { 
+                type: 0, 
+                len: this.polys[i].length - 1, 
+                points: [], 
+                col: "ffffff", 
+                z: 0 
+            };
+
+            let p = this.polys[i].length - 1;
+            this.polys[i][p] = this.cols[this.polys[i][p]];
+            p--;
+            while (p--) {
+                this.pgr[i].points[p] = new Array(2);
+            }
+        }
+
+        for (let i = 0; i < this.pts.length; i++) {
+            this.pt[i] = new Array(2);
+            this.pt3d[i] = new Array(3);
+        }
     }
+    
+    //main rendering routines to perform transformations and then add polygons to the stage for rendering
+    draw(s, m) {
+        for (let i = 0; i < this.pts.length; i++) {
+            convert2d(V3_mul4x4(m, this.pts[i], this.pt3d[i]), this.pt[i]);
+        }
+
+        this.polys.forEach((poly, i) => {
+            const norm = new Array(3);
+
+            V3_normal(this.pt3d[poly[1]], this.pt3d[poly[0]], this.pt3d[poly[2]], norm);
+
+            if (norm[2] > 0) {
+                const pg = this.pgr[i];
+                const a = Math.min((colmul * Math.acos(norm[2] / V3_length(norm))) | 0, colsteps - 1);
+
+                pg.col = poly[pg.len][a];
+
+                let z = 0;
+
+                for(let p = 0; p < pg.len; p++) {
+                    const pp = poly[p];
+                    pg.points[p] = this.pt[pp];
+                    z += this.pt3d[pp][2];
+                }
+
+                pg.z = z / pg.len;
+
+                s.push(pg);
+            }
+        });
+    };
 }
 
 //-- Particle Engine -----------------------------------------------------
 
-function particle(sprite, pos, vel, ttl) {
-    let _pos = pos.slice(0);
-    let _vel = vel.slice(0);
-    let _ttl = ttl;
-    let _obj = { "type": 1, "point": new Array(2), "sprite": sprite, "alpha": 1, "z": 0, "scale": 1 };
+class particle {
+    ttl;
+    pos;
+    vel;
+    obj;
 
-    let _r = Math.random() / 2;
-    _pos[0] += _vel[0] * _r;
-    _pos[1] += _vel[1] * _r;
-    _pos[2] += _vel[2] * _r;
+    constructor(sprite, pos, vel, ttl) {
+        this.pos = [...pos];
+        this.vel = [...vel];
+        this.ttl = ttl;
+        this.obj = { 
+            type: 1, 
+            point: new Array(2), 
+            sprite: sprite, 
+            alpha: 1, 
+            z: 0, 
+            scale: 1 
+        };
 
-    this.update = function (ms) {
-        _pos[0] += _vel[0] * ms;
-        _pos[1] += _vel[1] * ms;
-        _pos[2] += _vel[2] * ms;
-
-        return _ttl -= ms;
+        this.updatePos(Math.random() / 2);
     }
 
-    this.reset = function (pos, vel, ttlr) {
-        _pos[0] = pos[0];
-        _pos[1] = pos[1];
-        _pos[2] = pos[2];
-
-        _vel[0] = vel[0];
-        _vel[1] = vel[1];
-        _vel[2] = vel[2];
-
-        _r = Math.random() / 2;
-        _pos[0] += _vel[0] * _r;
-        _pos[1] += _vel[1] * _r;
-        _pos[2] += _vel[2] * _r;
-
-        _ttl = ttl;
+    updatePos(mul) {
+        this.pos[0] += this.vel[0] * mul;
+        this.pos[1] += this.vel[1] * mul;
+        this.pos[2] += this.vel[2] * mul;
     }
 
-    this.draw = function (s, max) {
-        convert2d(_pos, _obj.point);
-        _obj.alpha = Math.min(0.35, _ttl / max);
-        _obj.z = _pos[2];
-        _obj.scale = (_obj.z / -4000) + 1;
-        s.push(_obj);
+    update(ms) {
+        this.updatePos(ms);
+
+        return this.ttl -= ms;
+    }
+
+    reset(pos, vel, ttl) {
+        this.pos = [...pos];
+        this.vel = [...vel];
+
+        this.updatePos(Math.random() / 2);
+
+        this.ttl = ttl;
+    }
+
+    draw(s, max) {
+        convert2d(this.pos, this.obj.point);
+
+        this.obj.alpha = Math.min(0.35, this.ttl / max);
+        this.obj.z = this.pos[2];
+        this.obj.scale = (this.obj.z / -4000) + 1;
+
+        s.push(this.obj);
     }
 }
 
-export function particleEngine(img, spray, minlife, maxlife) {
-    let _particles = [];
-    let _tm = new Array(16);
-    let _vel = new Array(3);
-    let _ttl;
-    let _i;
-    let _n;
-    let _p;
-    let _ml = minlife;
-    let _mlm = maxlife - minlife;
-    let _mlfade = maxlife * 2;
-    let _s = spray;
-    let _img = { "img": new Image(), "hd": -9000, "d": 0 };
+export class particleEngine {
+    particles = new Array();
+    ml;
+    mlm;
+    mlfade;
+    s;
+    img;
 
-    _img.img.onload = function () {
-        _img.d = this.width;
-        _img.hd = this.width / 2;
-    };
+    constructor(img, spray, minlife, maxlife) {
+        this.ml = minlife;
+        this.mlm = maxlife - minlife;
+        this.mlfade = maxlife * 2;
+        this.s = spray;
+        this.img = { 
+            img: new Image(), 
+            hd: -9000, 
+            d: 0 
+        };
 
-    _img.img.src = img;
+        this.img.img.onload = () => {
+            this.img.d = this.img.img.width;
+            this.img.hd = this.img.img.width / 2;
+        };
 
-    this.changeParticle = function (img) {
-        _img.img.src = img;
+        this.img.img.src = img;
     }
 
-    this.render = function (s, pos, dir, ms, n) {
-        _n = n;
-        _i = _particles.length;
-        while (_i--) {
-            _p = _particles[_i];
-            if (_p.update(ms) < 0) {
-                if (_n > 0) {
-                    M4x4_rotateZ((Math.random() - 0.5) * _s, M4x4_I, _tm);
-                    M4x4_rotateY((Math.random() - 0.5) * _s, _tm, _tm);
-                    M4x4_rotateX((Math.random() - 0.5) * _s, _tm, _tm);
-                    V3_mul4x4(_tm, dir, _vel);
-                    _ttl = Math.random() * _mlm + _ml;
+    changeParticle(img) {
+        this.img.img.src = img;
+    }
 
-                    _p.reset(pos, _vel, _ttl);
-                    _p.draw(s, _mlfade);
-                    --_n;
+    render(s, pos, dir, ms, n) {
+        let newParticles = n;
+
+        this.particles.forEach((p) => {
+            if (p.update(ms) < 0) {
+                if (newParticles > 0) {
+                    const vel = this.computeVel(dir);
+                    const ttl = Math.random() * this.mlm + this.ml;
+
+                    p.reset(pos, vel, ttl);
+                    p.draw(s, this.mlfade);
+                    --newParticles;
                 }
             } else {
-                _p.draw(s, _mlfade);
+                p.draw(s, this.mlfade);
             }
-        }
+        });
 
-        while (_n--) {
-            M4x4_rotateZ((Math.random() - 0.5) * _s, M4x4_I, _tm);
-            M4x4_rotateY((Math.random() - 0.5) * _s, _tm, _tm);
-            M4x4_rotateX((Math.random() - 0.5) * _s, _tm, _tm);
-            V3_mul4x4(_tm, dir, _vel);
-            _ttl = Math.random() * _mlm + _ml;
+        while (newParticles--) {
+            const vel = this.computeVel(dir);            
+            const ttl = Math.random() * this.mlm + this.ml;
+            const p = new particle(this.img, pos, vel, ttl);
 
-            _p = new particle(_img, pos, _vel, _ttl);
-            _particles.push(_p);
-            _p.draw(s, _mlfade);
+            this.particles.push(p);
+            p.draw(s, this.mlfade);
         }
     }
 
-    this.renderOff = function (s, ms) {
-        _i = _particles.length;
-        while (_i--) {
-            _p = _particles[_i];
-            if (_p.update(ms) < 0) {
-                _particles.splice(_i, 1);
-            } else {
-                _p.draw(s, _mlfade);
+    computeVel(dir) {        
+        const tm = new Array(16);
+        const vel = new Array(3);
+
+        M4x4_rotateZ((Math.random() - 0.5) * this.s, M4x4_I, tm);
+        M4x4_rotateY((Math.random() - 0.5) * this.s, tm, tm);
+        M4x4_rotateX((Math.random() - 0.5) * this.s, tm, tm);
+        V3_mul4x4(tm, dir, vel);
+
+        return vel;
+    }
+
+    renderOff(s, ms) {
+        this.particles.forEach((p) => {
+            if (p.update(ms) >= 0) {
+                p.draw(s, this.mlfade);
             }
-        }
+        });
+
+        this.particles = this.particles.filter((p) => p.ttl >= 0);
     }
 }
 
 //-- Object Creation Routines --------------------------------------------
 
 export function createCube(col) {
-    let obj = [[], [], [col]];
-
-    obj[0] = [1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1];
-    obj[1] = [[1, 0, 5, 6, 0],
-                [5, 4, 7, 6, 0],
-                [7, 4, 3, 2, 0],
-                [0, 1, 2, 3, 0],
-                [0, 3, 4, 5, 0],
-                [1, 6, 7, 2, 0]];
-
-    return obj;
+    return [
+        [1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1],
+        [[1, 0, 5, 6, 0],
+         [5, 4, 7, 6, 0],
+         [7, 4, 3, 2, 0],
+         [0, 1, 2, 3, 0],
+         [0, 3, 4, 5, 0],
+         [1, 6, 7, 2, 0]],
+        [col]
+    ];
 }
 
 export function createStar(col) {
-    let obj = [[], [], [col]];
-
-    obj[0] = [1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1, 4, 0, 0, 0, 4, 0, -4, 0, 0, 0, -4, 0, 0, 0, 4, 0, 0, -4];
-    obj[1] = [
-                [8, 0, 5, 0],
-                [8, 5, 6, 0],
-                [8, 1, 0, 0],
-                [8, 6, 1, 0],
-                [13, 5, 4, 0],
-                [13, 4, 7, 0],
-                [13, 7, 6, 0],
-                [13, 6, 5, 0],
-                [9, 4, 5, 0],
-                [9, 3, 4, 0],
-                [9, 0, 3, 0],
-                [9, 5, 0, 0],
-                [10, 2, 7, 0],
-                [10, 3, 2, 0],
-                [10, 4, 3, 0],
-                [10, 7, 4, 0],
-                [12, 1, 2, 0],
-                [12, 0, 1, 0],
-                [12, 2, 3, 0],
-                [12, 3, 0, 0],
-                [11, 2, 1, 0],
-                [11, 7, 2, 0],
-                [11, 1, 6, 0],
-                [11, 6, 7, 0]
+    return [
+        [1, 1, 1, 1, -1, 1, -1, -1, 1, -1, 1, 1, -1, 1, -1, 1, 1, -1, 1, -1, -1, -1, -1, -1, 4, 0, 0, 0, 4, 0, -4, 0, 0, 0, -4, 0, 0, 0, 4, 0, 0, -4],
+        [
+            [8, 0, 5, 0],
+            [8, 5, 6, 0],
+            [8, 1, 0, 0],
+            [8, 6, 1, 0],
+            [13, 5, 4, 0],
+            [13, 4, 7, 0],
+            [13, 7, 6, 0],
+            [13, 6, 5, 0],
+            [9, 4, 5, 0],
+            [9, 3, 4, 0],
+            [9, 0, 3, 0],
+            [9, 5, 0, 0],
+            [10, 2, 7, 0],
+            [10, 3, 2, 0],
+            [10, 4, 3, 0],
+            [10, 7, 4, 0],
+            [12, 1, 2, 0],
+            [12, 0, 1, 0],
+            [12, 2, 3, 0],
+            [12, 3, 0, 0],
+            [11, 2, 1, 0],
+            [11, 7, 2, 0],
+            [11, 1, 6, 0],
+            [11, 6, 7, 0]
+        ],
+        [col]
     ];
-
-    return obj;
 }
 
 export function createTorus(d1, d2, r1, r2, col) {
     let i, j;
-    let obj = [[], [], [col]];
-    let rpi1 = (Math.PI * 2) / d1;
-    let rpi2 = (Math.PI * 2) / d2;
-    let pts = [];
-    let cir = [];
+    const obj = [[], [], [col]];
+    const rpi1 = (Math.PI * 2) / d1;
+    const rpi2 = (Math.PI * 2) / d2;
+    const pts = new Array();
+    const cir = new Array();
     let tm;
 
     cir.push([0, r2, 0]);
-    tm = M4x4_rotateX(rpi2, M4x4_I);
+
+    let tm1 = new Array(16);
+    M4x4_rotateX(rpi2, M4x4_I, tm1);
     for (i = 1; i < d2; i++) {
-        cir.push(V3_mul4x4(tm, cir[i - 1]));
+        cir.push(V3_mul4x4(tm1, cir[i - 1]));
     }
 
     for (i = 0; i < d2; i++) {
         cir[i] = V3_add(cir[i], [0, r1, 0]);
     }
 
-    tm = M4x4_rotateZ(rpi1, M4x4_I);
+    let tm2 = new Array(16);
+    M4x4_rotateZ(rpi1, M4x4_I, tm2);
     for (i = 0; i < d2; i++) {
         pts.push(cir[i]);
     }
     for (j = 1; j < d1; j++) {
         for (i = 0; i < d2; i++) {
-            pts.push(V3_mul4x4(tm, pts[((j - 1) * d2) + i]));
+            pts.push(V3_mul4x4(tm2, pts[((j - 1) * d2) + i]));
         }
         for (i = 1; i < d2; i++) {
             obj[1].push([(j) * d2 + (i), (j) * d2 + (i - 1), (j - 1) * d2 + (i - 1), (j - 1) * d2 + (i), 0]);
@@ -396,11 +409,9 @@ export function createTorus(d1, d2, r1, r2, col) {
 }
 
 export function createAWing() {
-    let obj = [[], [], ["#111111", "#AA2222", "#666666", "#EEAAAA", "#333333", "#222222"]];
-
-    obj[0] = [8, 30, -8, 0, 30, -14, 0, 16, -16, 8, 16, -6, -8, 16, -6, -8, 30, -8, 0, -11, -2, 0, 48, -8, 17, 35, -8, 17, 40, -18, 17, 65, -18, 17, 65, -8, 17, 65, 8, 17, 65, 13, 17, 40, 13, 17, 35, 8, -17, 35, -8, -17, 40, -18, -17, 65, -18, -17, 65, -8, -17, 35, 8, -17, 40, 13, -17, 65, 13, -17, 65, 8, 24, 61, -3, 24, 61, 4, 24, 63, 4, 24, 63, -3, 10, 61, -3, 10, 61, 4, 10, 63, 4, 10, 63, -3, 17, 61, 8, 17, 63, 8, 17, 61, -8, 17, 63, -8, -24, 61, -3, -24, 61, 4, -24, 63, 4, -24, 63, -3, -10, 61, -3, -10, 61, 4, -10, 63, 4, -10, 63, -3, -17, 61, 8, -17, 63, 8, -17, 61, -8, -17, 63, -8, 24, 30, -3, 24, 30, 4, 24, 55, 4, 24, 55, -3, 17, 48, 8, 10, 48, 4, 10, 55, 4, 17, 55, 8, 17, 30, -8, 17, 55, -8, 10, 55, -3, 10, 48, -3, 17, 48, -8, 17, 30, 8, -17, 55, 8, -24, 55, 4, -24, 55, -3, -17, 55, -8, -10, 55, -3, -10, 55, 4, -24, 30, 4, -24, 30, -3, -10, 48, 4, -17, 48, 8, -17, 30, -8, -17, 48, -8, -10, 48, -3, -17, 30, 8, 32, 30, -3, 32, 30, 3, -32, 30, 3, -32, 30, -3, 33, -1, 0, 33, 35, 0, 33.5, 35, 0.25, 33.5, -1, 0.25, 33.5, 35, -0.25, 33.5, -1, -0.25, -33.5, -1, -0.25, -33.5, 35, -0.25, -33.5, 35, 0.25, -33.5, -1, 0.25, -33, 35, 0, -33, -1, 0, -32, 1, 2, -33, 1, 2, -33, 3, 0, -32, 3, 0, 32, 1, 2, 33, 1, 2, 33, 3, 0, 32, 3, 0, -32, 1, -2, -33, 1, -2, 32, 1, -2, 33, 1, -2, -17, -28, 0, 17, -28, 0, -6, 48, -4, 6, 48, -4, 6, 48, 4, -6, 48, 4];
-
-    obj[1] = [
+    return [
+            [8, 30, -8, 0, 30, -14, 0, 16, -16, 8, 16, -6, -8, 16, -6, -8, 30, -8, 0, -11, -2, 0, 48, -8, 17, 35, -8, 17, 40, -18, 17, 65, -18, 17, 65, -8, 17, 65, 8, 17, 65, 13, 17, 40, 13, 17, 35, 8, -17, 35, -8, -17, 40, -18, -17, 65, -18, -17, 65, -8, -17, 35, 8, -17, 40, 13, -17, 65, 13, -17, 65, 8, 24, 61, -3, 24, 61, 4, 24, 63, 4, 24, 63, -3, 10, 61, -3, 10, 61, 4, 10, 63, 4, 10, 63, -3, 17, 61, 8, 17, 63, 8, 17, 61, -8, 17, 63, -8, -24, 61, -3, -24, 61, 4, -24, 63, 4, -24, 63, -3, -10, 61, -3, -10, 61, 4, -10, 63, 4, -10, 63, -3, -17, 61, 8, -17, 63, 8, -17, 61, -8, -17, 63, -8, 24, 30, -3, 24, 30, 4, 24, 55, 4, 24, 55, -3, 17, 48, 8, 10, 48, 4, 10, 55, 4, 17, 55, 8, 17, 30, -8, 17, 55, -8, 10, 55, -3, 10, 48, -3, 17, 48, -8, 17, 30, 8, -17, 55, 8, -24, 55, 4, -24, 55, -3, -17, 55, -8, -10, 55, -3, -10, 55, 4, -24, 30, 4, -24, 30, -3, -10, 48, 4, -17, 48, 8, -17, 30, -8, -17, 48, -8, -10, 48, -3, -17, 30, 8, 32, 30, -3, 32, 30, 3, -32, 30, 3, -32, 30, -3, 33, -1, 0, 33, 35, 0, 33.5, 35, 0.25, 33.5, -1, 0.25, 33.5, 35, -0.25, 33.5, -1, -0.25, -33.5, -1, -0.25, -33.5, 35, -0.25, -33.5, 35, 0.25, -33.5, -1, 0.25, -33, 35, 0, -33, -1, 0, -32, 1, 2, -33, 1, 2, -33, 3, 0, -32, 3, 0, 32, 1, 2, 33, 1, 2, 33, 3, 0, 32, 3, 0, -32, 1, -2, -33, 1, -2, 32, 1, -2, 33, 1, -2, -17, -28, 0, 17, -28, 0, -6, 48, -4, 6, 48, -4, 6, 48, 4, -6, 48, 4],
+            [
                 [0, 1, 2, 3, 0],
                 [4, 2, 1, 5, 0],
                 [2, 6, 3, 0],
@@ -487,16 +498,15 @@ export function createAWing() {
                 [74, 106, 109, 70, 2],
                 [73, 60, 59, 74, 2],
                 [70, 53, 52, 71, 2]
+        ],
+        ["#111111", "#AA2222", "#666666", "#EEAAAA", "#333333", "#222222"]
     ];
-
-    return obj;
 }
 
 //-- mjs library -----------------------------------------------------------------
 
 export function V3_mul4x4(m, v, r) {
-    if (r == undefined)
-        r = new Array(3);
+    if (r == undefined)  r = new Array(3);
 
     let v0 = v[0];
     let v1 = v[1];
@@ -511,8 +521,7 @@ export function V3_mul4x4(m, v, r) {
 }
 
 export function V3_add(a, b, r) {
-    if (r == undefined)
-        r = new Array(3);
+    if (r == undefined) r = new Array(3);
 
     r[0] = a[0] + b[0];
     r[1] = a[1] + b[1];
@@ -522,15 +531,15 @@ export function V3_add(a, b, r) {
 }
 
 export function V3_normal(a, b, c, r) {
-    let b0 = b[0];
-    let b1 = b[1];
-    let b2 = b[2];
-    let a0 = a[0] - b0;
-    let a1 = a[1] - b1;
-    let a2 = a[2] - b2;
-    let c0 = c[0] - b0;
-    let c1 = c[1] - b1;
-    let c2 = c[2] - b2;
+    const b0 = b[0];
+    const b1 = b[1];
+    const b2 = b[2];
+    const a0 = a[0] - b0;
+    const a1 = a[1] - b1;
+    const a2 = a[2] - b2;
+    const c0 = c[0] - b0;
+    const c1 = c[1] - b1;
+    const c2 = c[2] - b2;
 
     r[0] = a1 * c2 - a2 * c1;
     r[1] = a2 * c0 - a0 * c2;
@@ -542,110 +551,99 @@ export function V3_length(a) {
 }
 
 export function V3_normalize(a, r) {
-    if (r == undefined)
-        r = new Array(3);
+    if (r == undefined) r = new Array(3);
+
     let im = 1.0 / V3_length(a);
     r[0] = a[0] * im;
     r[1] = a[1] * im;
     r[2] = a[2] * im;
+
     return r;
 }
 
 export function V3_scale(a, k, r) {
-    if (r == undefined)
-        r = new Array(3);
+    if (r == undefined) r = new Array(3);
+
     r[0] = a[0] * k;
     r[1] = a[1] * k;
     r[2] = a[2] * k;
+
     return r;
 }
 
 export function V3_neg(a, r) {
-    if (r == undefined)
-        r = new Array(3);
+    if (r == undefined) r = new Array(3);
+
     r[0] = -a[0];
     r[1] = -a[1];
     r[2] = -a[2];
+    
     return r;
 }
 
 //-- M4x4 ----------------------------------------------------------------------------------
 
-export let M4x4_I = [1.0, 0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0, 0.0,
-            0.0, 0.0, 1.0, 0.0,
-            0.0, 0.0, 0.0, 1.0];
+export const M4x4_I = [1.0, 0.0, 0.0, 0.0,
+                       0.0, 1.0, 0.0, 0.0,
+                       0.0, 0.0, 1.0, 0.0,
+                       0.0, 0.0, 0.0, 1.0];
 
 
-export function M4x4_clone(m, r) {
-    if (r == undefined)
-        r = new Array(16);
-
-    r[0] = m[0];
-    r[1] = m[1];
-    r[2] = m[2];
-    r[3] = m[3];
-    r[4] = m[4];
-    r[5] = m[5];
-    r[6] = m[6];
-    r[7] = m[7];
-    r[8] = m[8];
-    r[9] = m[9];
-    r[10] = m[10];
-    r[11] = m[11];
-    r[12] = m[12];
-    r[13] = m[13];
-    r[14] = m[14];
-    r[15] = m[15];
-
-    return r;
+export function M4x4_clone(m) {
+    return [...m];
 }
 
 export function M4x4_rotate(angle, axis, m, r) {
-    if (r == undefined)
-        r = new Array(16);
+    if (r == undefined) r = new Array(16);
 
-    let a0 = axis[0], a1 = axis[1], a2 = axis[2];
-    let l = Math.sqrt(a0 * a0 + a1 * a1 + a2 * a2);
-    let x = a0, y = a1, z = a2;
+    const a0 = axis[0];
+    const a1 = axis[1];
+    const a2 = axis[2];
+    const l = Math.sqrt(a0 * a0 + a1 * a1 + a2 * a2);
+
+    let x = a0;
+    let y = a1;
+    let z = a2;
+
     if (l != 1.0) {
-        let im = 1.0 / l;
+        const im = 1.0 / l;
         x *= im;
         y *= im;
         z *= im;
     }
-    let c = Math.cos(angle);
-    let c1 = 1 - c;
-    let s = Math.sin(angle);
-    let xs = x * s;
-    let ys = y * s;
-    let zs = z * s;
-    let xyc1 = x * y * c1;
-    let xzc1 = x * z * c1;
-    let yzc1 = y * z * c1;
 
-    let m11 = m[0];
-    let m21 = m[1];
-    let m31 = m[2];
-    let m41 = m[3];
-    let m12 = m[4];
-    let m22 = m[5];
-    let m32 = m[6];
-    let m42 = m[7];
-    let m13 = m[8];
-    let m23 = m[9];
-    let m33 = m[10];
-    let m43 = m[11];
+    const c = Math.cos(angle);
+    const c1 = 1 - c;
+    const s = Math.sin(angle);
+    const xs = x * s;
+    const ys = y * s;
+    const zs = z * s;
+    const xyc1 = x * y * c1;
+    const xzc1 = x * z * c1;
+    const yzc1 = y * z * c1;
 
-    let t11 = x * x * c1 + c;
-    let t21 = xyc1 + zs;
-    let t31 = xzc1 - ys;
-    let t12 = xyc1 - zs;
-    let t22 = y * y * c1 + c;
-    let t32 = yzc1 + xs;
-    let t13 = xzc1 + ys;
-    let t23 = yzc1 - xs;
-    let t33 = z * z * c1 + c;
+    const m11 = m[0];
+    const m21 = m[1];
+    const m31 = m[2];
+    const m41 = m[3];
+    const m12 = m[4];
+    const m22 = m[5];
+    const m32 = m[6];
+    const m42 = m[7];
+    const m13 = m[8];
+    const m23 = m[9];
+    const m33 = m[10];
+    const m43 = m[11];
+
+    const t11 = x * x * c1 + c;
+    const t21 = xyc1 + zs;
+    const t31 = xzc1 - ys;
+    const t12 = xyc1 - zs;
+    const t22 = y * y * c1 + c;
+    const t32 = yzc1 + xs;
+    const t13 = xzc1 + ys;
+    const t23 = yzc1 - xs;
+    const t33 = z * z * c1 + c;
 
     r[0] = m11 * t11 + m12 * t21 + m13 * t31;
     r[1] = m21 * t11 + m22 * t21 + m23 * t31;
@@ -659,6 +657,7 @@ export function M4x4_rotate(angle, axis, m, r) {
     r[9] = m21 * t13 + m22 * t23 + m23 * t33;
     r[10] = m31 * t13 + m32 * t23 + m33 * t33;
     r[11] = m41 * t13 + m42 * t23 + m43 * t33;
+
     if (r != m) {
         r[12] = m[12];
         r[13] = m[13];
@@ -670,20 +669,19 @@ export function M4x4_rotate(angle, axis, m, r) {
 }
 
 export function M4x4_rotateX(angle, m, r) {
-    if (r == undefined)
-        r = new Array(16);
+    if (r == undefined) r = new Array(16);
 
-    let c = Math.cos(angle);
-    let s = Math.sin(angle);
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
 
-    let a12 = m[4];
-    let a22 = m[5];
-    let a32 = m[6];
-    let a42 = m[7];
-    let a13 = m[8];
-    let a23 = m[9];
-    let a33 = m[10];
-    let a43 = m[11];
+    const a12 = m[4];
+    const a22 = m[5];
+    const a32 = m[6];
+    const a42 = m[7];
+    const a13 = m[8];
+    const a23 = m[9];
+    const a33 = m[10];
+    const a43 = m[11];
 
     r[0] = m[0];
     r[1] = m[1];
@@ -706,20 +704,19 @@ export function M4x4_rotateX(angle, m, r) {
 }
 
 export function M4x4_rotateY(angle, m, r) {
-    if (r == undefined)
-        r = new Array(16);
+    if (r == undefined) r = new Array(16);
 
-    let c = Math.cos(angle);
-    let s = Math.sin(angle);
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
 
-    let a11 = m[0];
-    let a21 = m[1];
-    let a31 = m[2];
-    let a41 = m[3];
-    let a13 = m[8];
-    let a23 = m[9];
-    let a33 = m[10];
-    let a43 = m[11];
+    const a11 = m[0];
+    const a21 = m[1];
+    const a31 = m[2];
+    const a41 = m[3];
+    const a13 = m[8];
+    const a23 = m[9];
+    const a33 = m[10];
+    const a43 = m[11];
 
     r[0] = a11 * c + a13 * s;
     r[1] = a21 * c + a23 * s;
@@ -742,20 +739,19 @@ export function M4x4_rotateY(angle, m, r) {
 }
 
 export function M4x4_rotateZ(angle, m, r) {
-    if (r == undefined)
-        r = new Array(16);
+    if (r == undefined) r = new Array(16);
 
-    let c = Math.cos(angle);
-    let s = Math.sin(angle);
+    const c = Math.cos(angle);
+    const s = Math.sin(angle);
 
-    let a11 = m[0];
-    let a21 = m[1];
-    let a31 = m[2];
-    let a41 = m[3];
-    let a12 = m[4];
-    let a22 = m[5];
-    let a32 = m[6];
-    let a42 = m[7];
+    const a11 = m[0];
+    const a21 = m[1];
+    const a31 = m[2];
+    const a41 = m[3];
+    const a12 = m[4];
+    const a22 = m[5];
+    const a32 = m[6];
+    const a42 = m[7];
 
     r[0] = a11 * c - a12 * s;
     r[1] = a21 * c - a22 * s;
@@ -778,9 +774,9 @@ export function M4x4_rotateZ(angle, m, r) {
 }
 
 export function M4x4_translate3(v, m, r) {
-    let x = v[0];
-    let y = v[1];
-    let z = v[2];
+    const x = v[0];
+    const y = v[1];
+    const z = v[2];
 
     if (r == m) {
         m[12] += m[0] * x + m[4] * y + m[8] * z;
@@ -790,21 +786,20 @@ export function M4x4_translate3(v, m, r) {
         return m;
     }
 
-    if (r == undefined)
-        r = new Array(16);
+    if (r == undefined) r = new Array(16);
 
-    let m11 = m[0];
-    let m21 = m[1];
-    let m31 = m[2];
-    let m41 = m[3];
-    let m12 = m[4];
-    let m22 = m[5];
-    let m32 = m[6];
-    let m42 = m[7];
-    let m13 = m[8];
-    let m23 = m[9];
-    let m33 = m[10];
-    let m43 = m[11];
+    const m11 = m[0];
+    const m21 = m[1];
+    const m31 = m[2];
+    const m41 = m[3];
+    const m12 = m[4];
+    const m22 = m[5];
+    const m32 = m[6];
+    const m42 = m[7];
+    const m13 = m[8];
+    const m23 = m[9];
+    const m33 = m[10];
+    const m43 = m[11];
 
     r[0] = m11;
     r[1] = m21;
