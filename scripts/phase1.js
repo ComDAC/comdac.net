@@ -26,12 +26,12 @@ class page {
 
     //-- main rendering code -----------------------------------------------------------------------
 
-    stage = [];
+    stage = new Array();
 
     objPointX = [100, 0, 0];
     objPointY = [0, 100, 0];
     objPointZ = [-100, 0, 0];
-    objs = [];
+    objs = new Array();
 
     caxis = [1, 1, 0];
     baxis = [0, 1, 1];
@@ -169,7 +169,7 @@ class page {
         this.dom.cbTorusParticles.addEventListener("change", (e) => this.showTorusParticles = e.target.checked);        
         this.dom.cbRotator.addEventListener("change", (e) => this.showRotator = e.target.checked);
 
-        this.stats = stats.init();
+        this.stats = stats.init(this);
  
         this.ctx = this.dom.cnvs.getContext("2d");
 

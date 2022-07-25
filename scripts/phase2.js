@@ -103,7 +103,7 @@ class page {
     //-- entry points ----------------------------
 
     onLoad = () => {
-        this.stats = stats.init();
+        this.stats = stats.init(this);
  
         this.ctx = this.dom.cnvs.getContext("2d");
 
