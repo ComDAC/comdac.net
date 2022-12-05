@@ -26,7 +26,7 @@ class page {
     shaderProgram;
     textureFiles = ["../images/db1.png","../images/db2.png","../images/db3.png","../images/db4.png","../images/db5.png","../images/db6.png","../images/db7.png"];
     glTexture = [7];
-    ballMul = 20;
+    ballMul = 10;
     balls = [];
     lastFrame = 0;
 
@@ -70,7 +70,7 @@ class page {
     }
 
     isPowerOf2(value) {
-        return (value & (value - 1)) == 0;
+        return (value & (value - 1)) === 0;
     }
 
     loadTexture(gl, image) {
@@ -90,6 +90,11 @@ class page {
         return texture;
     }
 
+    radQuarter = Math.PI / 2;
+    rad3Quarter = (3 * Math.PI) / 2;
+    radFull = Math.PI * 2;
+    padding = 24;
+
     initBalls() {
         const totalBalls = this.textureFiles.length * this.ballMul;
 
@@ -97,27 +102,92 @@ class page {
             this.balls.push({
                 x: Math.random() * this.gl.canvas.width,
                 y: Math.random() * this.gl.canvas.height,
-                xvel: (Math.random() - 0.5) * 0.7,
-                yvel: (Math.random() - 0.5) * 0.7
+                vel: (Math.random() * 0.3) + 0.1,
+                dir: Math.random() * this.radFull,
+                closest: null
             });
         }
     }
 
     processBalls(time) {
         this.balls.forEach(b => {
-            b.x += b.xvel * time;
-            b.y += b.yvel * time;
-            
-            if (((b.x < 0) && (b.xvel < 0)) || ((b.x > this.gl.canvas.width) && (b.xvel > 0))) {
-                b.xvel *= -1;
-                b.x += b.xvel * (time / 1000);
-            }            
-            
-            if (((b.y < 0) && (b.yvel < 0)) || ((b.y > this.gl.canvas.height) && (b.yvel > 0))) {
-                b.yvel *= -1;
-                b.y += b.yvel * (time / 1000);
+
+            let closest = this.balls.find(bf => {
+                return ((bf !== b) && (bf != b.closest) && ((Math.sqrt(Math.pow(bf.x - b.x,2) + Math.pow(bf.y - b.y,2))) < 48));  
+            });
+
+            if (closest != null) {
+                b.dir = this.clipRadian(b.dir - closest.dir);
+                closest.dir = this.clipRadian(closest.dir - b.dir);
+                b.closest = closest;
+                closest.closest = b;                
             }
+
+            if ((b.x < this.padding) && (b.dir > this.radQuarter) && (b.dir < this.rad3Quarter)) {
+                b.dir = this.bounceHorizontal(b.dir);
+            }
+
+            if ((b.x > (this.gl.canvas.width - this.padding)) && ((b.dir < this.radQuarter) || (b.dir > this.rad3Quarter))) {
+                b.dir = this.bounceHorizontal(b.dir);
+            }
+
+            if ((b.y < this.padding) && ((b.dir > Math.PI) && (b.dir < this.radFull))) {
+                b.dir = this.bounceVertical(b.dir);
+            }
+
+            if ((b.y > (this.gl.canvas.height - this.padding)) && (b.dir < Math.PI) && (b.dir > 0)) {
+                b.dir = this.bounceVertical(b.dir);
+            }
+
+            this.applyMotion(b, time);
         });
+    }
+
+    bounceHorizontal(dir) {
+        if (dir > Math.PI) {
+            dir = (this.rad3Quarter - dir) + this.rad3Quarter;
+        } else if (dir < Math.PI) {
+            dir = this.radQuarter - (dir - this.radQuarter);
+        } else {
+            dir += Math.PI;
+        }
+
+        return this.clipRadian(dir);
+    }
+
+    bounceVertical(dir) {
+        if (dir > this.radQuarter) {
+            dir = this.radFull - dir;
+        } else if (dir < this.radQuarter) {
+            dir = (Math.PI - dir) + Math.PI;
+        } else {
+            dir += Math.PI;
+        }
+
+        return this.clipRadian(dir);
+    }
+
+    clipRadian(r) {
+        if (r < 0) {
+            r += this.radFull;
+        } else if (r > this.radFull) {
+            r -= this.radFull;
+        }
+
+        return r;
+    }
+
+    getX(b) {
+        return b.vel * Math.cos(b.dir);
+    }
+
+    getY(b) {
+        return b.vel * Math.sin(b.dir);
+    }
+
+    applyMotion(b, time) {
+        b.x += this.getX(b) * time;
+        b.y += this.getY(b) * time;
     }
 
     updatePointsArray(gl, points, shaderProgram, name) {
@@ -163,7 +233,7 @@ class page {
     } 
 
     initTextures(done) {
-        var loadCounter = 0;
+        let loadCounter = 0;
 
         this.textureFiles.forEach((tf, i) => {
             loadCounter++;
