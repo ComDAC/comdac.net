@@ -25,8 +25,8 @@ class page {
     gl;
     shaderProgram;
     textureFiles = ["../images/db1.png","../images/db2.png","../images/db3.png","../images/db4.png","../images/db5.png","../images/db6.png","../images/db7.png"];
-    glTexture = [7];
-    ballMul = 10;
+    glTexture = [];
+    ballMul = 5;
     balls = [];
     lastFrame = 0;
 
@@ -117,8 +117,12 @@ class page {
             });
 
             if (closest != null) {
-                b.dir = this.clipRadian(b.dir - closest.dir);
-                closest.dir = this.clipRadian(closest.dir - b.dir);
+                let bdir = this.bounce(b, closest);
+                let cdir = this.bounce(closest, b);
+                
+                b.dir = bdir;
+                closest.dir = cdir;
+
                 b.closest = closest;
                 closest.closest = b;                
             }
@@ -141,6 +145,43 @@ class page {
 
             this.applyMotion(b, time);
         });
+    }
+
+    bounce(a, b) {
+        let dir = this.calcLineSegmentAngle(a, b) + this.radFull;
+        let ref = a.dir + this.radFull + this.radQuarter;
+
+        if (ref < dir) {
+            dir = dir + (dir - ref);
+        } else {
+            dir = dir - (ref - dir);
+        }
+
+        return this.clipRadian(dir);
+    }
+
+    calcLineSegmentAngle(a, b) {
+        let deltaX = a.x - b.x;
+        let deltaY = a.y - b.y;
+        let magX = Math.abs(deltaX);
+        let magY = Math.abs(deltaY);
+        let dir;
+
+        if ((deltaX < 0) && (deltaY < 0)) {
+            //pointing SE
+            dir = Math.atan(magY / magX);
+        } else if (deltaX < 0) {
+            //pointing NE
+            dir = Math.atan(magX / magY) + this.rad3Quarter;
+        } else if (deltaY < 0) {
+            //pointing SW
+            dir = Math.PI - Math.atan(magY / magX);
+        } else {
+            //pointing NW
+            dir = this.rad3Quarter - Math.atan(magX / magY);
+        }
+
+        return dir;
     }
 
     bounceHorizontal(dir) {
@@ -168,9 +209,11 @@ class page {
     }
 
     clipRadian(r) {
-        if (r < 0) {
+        while (r < 0) {
             r += this.radFull;
-        } else if (r > this.radFull) {
+        }
+
+        while (r > this.radFull) {
             r -= this.radFull;
         }
 
