@@ -1,6 +1,8 @@
 ﻿import * as site from "./site.js";
 import * as stats from "./stats.js";
 
+//const friction = 0.0;
+
 const vertexShaderCode = `
     attribute vec2 spritePosition; 
     uniform vec2 screenSize; 
@@ -19,6 +21,60 @@ const fragmentShaderCode = `
         gl_FragColor = texture2D(spriteTexture, gl_PointCoord);
     }
 `;
+
+class Vector{
+    constructor(x, y){
+        this.x = x;
+        this.y = y;
+    }
+
+    add(v){
+        return new Vector(this.x + v.x, this.y + v.y);
+    }
+
+    subtr(v){
+        return new Vector(this.x - v.x, this.y - v.y);
+    }
+
+    mag(){
+        return Math.sqrt(this.x ** 2 + this.y ** 2);
+    }
+
+    mult(n){
+        return new Vector(this.x * n, this.y * n);
+    }
+
+    normal(){
+        return new Vector(-this.y, this.x).unit();
+    }
+
+    unit(){
+        if(this.mag() === 0){
+            return new Vector(0,0);
+        } else {
+            let m = this.mag();
+            return new Vector(this.x / m, this.y / m);
+        }
+    }
+    
+    static dot(v1, v2){
+        return (v1.x * v2.x) + (v1.y * v2.y);
+    }
+}
+
+class Ball{
+    constructor(x, y, r, velX, velY){
+        this.pos = new Vector(x,y);
+        this.r = r;
+        this.vel = new Vector(velX, velY);
+        
+        return this;
+    }
+
+    reposition(time){
+        this.pos = this.pos.add(this.vel.mult(time));
+    }
+}
 
 class page {
     stats;
@@ -99,147 +155,81 @@ class page {
         const totalBalls = this.textureFiles.length * this.ballMul;
 
         for(let i=0; i<totalBalls; i++) {
-            this.balls.push({
-                x: Math.random() * this.gl.canvas.width,
-                y: Math.random() * this.gl.canvas.height,
-                vel: (Math.random() * 0.3) + 0.1,
-                dir: Math.random() * this.radFull,
-                closest: null
-            });
+            this.balls.push(new Ball(
+                Math.random() * this.gl.canvas.width,
+                Math.random() * this.gl.canvas.height,
+                24,
+                0.4 - ((Math.random() * 0.7) + 0.1),                
+                0.4 - ((Math.random() * 0.7) + 0.1)
+            ));
         }
+    }
+
+    round(number, precision){
+        let factor = 10 ** precision;
+        return Math.round(number * factor) / factor;
+    }
+    
+    coll_det_bb(b1, b2){
+        return b1.r + b2.r >= b2.pos.subtr(b1.pos).mag();
+    }
+    
+    pen_res_bb(b1, b2){
+        let dist = b1.pos.subtr(b2.pos);
+        let pen_depth = b1.r + b2.r - dist.mag();
+        let pen_res = dist.unit().mult(pen_depth / 2);
+        b1.pos = b1.pos.add(pen_res);
+        b2.pos = b2.pos.add(pen_res.mult(-1));
+    }
+
+    coll_res_bb(b1, b2){
+        //collision normal vector
+        let normal = b1.pos.subtr(b2.pos).unit();
+        //relative velocity vector
+        let relVel = b1.vel.subtr(b2.vel);
+        //separating velocity - relVel projected onto the collision normal vector
+        let sepVel = Vector.dot(relVel, normal);
+        //the projection value after the collision (multiplied by -1)
+        let new_sepVel = -sepVel;
+        //collision normal vector with the magnitude of the new_sepVel
+        let sepVelVec = normal.mult(new_sepVel);
+    
+        //adding the separating velocity vector to the original vel. vector
+        b1.vel = b1.vel.add(sepVelVec);
+        //adding its opposite to the other balls original vel. vector
+        b2.vel = b2.vel.add(sepVelVec.mult(-1));
     }
 
     processBalls(time) {
-        this.balls.forEach(b => {
+        this.balls.forEach((b, index) => {
+            b.reposition(time);   
 
-            let closest = this.balls.find(bf => {
-                return ((bf !== b) && (bf != b.closest) && ((Math.sqrt(Math.pow(bf.x - b.x,2) + Math.pow(bf.y - b.y,2))) < 48));  
-            });
-
-            if (closest != null) {
-                let bdir = this.bounce(b, closest);
-                let cdir = this.bounce(closest, b);
-                
-                b.dir = bdir;
-                closest.dir = cdir;
-
-                b.closest = closest;
-                closest.closest = b;                
+            if (((b.pos.x < b.r) && (b.vel.x < 0)) || ((b.pos.x > (this.gl.canvas.width - b.r)) && (b.vel.x > 0))) {
+                b.vel.x *= -1;
+            }
+    
+            if (((b.pos.y < b.r) && (b.vel.y < 0)) || ((b.pos.y > (this.gl.canvas.height - b.r)) && (b.vel.y > 0))) {
+                b.vel.y *= -1;
             }
 
-            if ((b.x < this.padding) && (b.dir > this.radQuarter) && (b.dir < this.rad3Quarter)) {
-                b.dir = this.bounceHorizontal(b.dir);
-            }
+            for (let i=index + 1; i<this.balls.length; i++) {
+                let b2 = this.balls[i];
 
-            if ((b.x > (this.gl.canvas.width - this.padding)) && ((b.dir < this.radQuarter) || (b.dir > this.rad3Quarter))) {
-                b.dir = this.bounceHorizontal(b.dir);
-            }
-
-            if ((b.y < this.padding) && ((b.dir > Math.PI) && (b.dir < this.radFull))) {
-                b.dir = this.bounceVertical(b.dir);
-            }
-
-            if ((b.y > (this.gl.canvas.height - this.padding)) && (b.dir < Math.PI) && (b.dir > 0)) {
-                b.dir = this.bounceVertical(b.dir);
-            }
-
-            this.applyMotion(b, time);
+                if(this.coll_det_bb(b, b2)){
+                    this.pen_res_bb(b, b2);
+                    this.coll_res_bb(b, b2);
+                }
+            }         
         });
     }
 
-    bounce(a, b) {
-        let dir = this.calcLineSegmentAngle(a, b) + this.radFull;
-        let ref = a.dir + this.radFull + this.radQuarter;
-
-        if (ref < dir) {
-            dir = dir + (dir - ref);
-        } else {
-            dir = dir - (ref - dir);
-        }
-
-        return this.clipRadian(dir);
-    }
-
-    calcLineSegmentAngle(a, b) {
-        let deltaX = a.x - b.x;
-        let deltaY = a.y - b.y;
-        let magX = Math.abs(deltaX);
-        let magY = Math.abs(deltaY);
-        let dir;
-
-        if ((deltaX < 0) && (deltaY < 0)) {
-            //pointing SE
-            dir = Math.atan(magY / magX);
-        } else if (deltaX < 0) {
-            //pointing NE
-            dir = Math.atan(magX / magY) + this.rad3Quarter;
-        } else if (deltaY < 0) {
-            //pointing SW
-            dir = Math.PI - Math.atan(magY / magX);
-        } else {
-            //pointing NW
-            dir = this.rad3Quarter - Math.atan(magX / magY);
-        }
-
-        return dir;
-    }
-
-    bounceHorizontal(dir) {
-        if (dir > Math.PI) {
-            dir = (this.rad3Quarter - dir) + this.rad3Quarter;
-        } else if (dir < Math.PI) {
-            dir = this.radQuarter - (dir - this.radQuarter);
-        } else {
-            dir += Math.PI;
-        }
-
-        return this.clipRadian(dir);
-    }
-
-    bounceVertical(dir) {
-        if (dir > this.radQuarter) {
-            dir = this.radFull - dir;
-        } else if (dir < this.radQuarter) {
-            dir = (Math.PI - dir) + Math.PI;
-        } else {
-            dir += Math.PI;
-        }
-
-        return this.clipRadian(dir);
-    }
-
-    clipRadian(r) {
-        while (r < 0) {
-            r += this.radFull;
-        }
-
-        while (r > this.radFull) {
-            r -= this.radFull;
-        }
-
-        return r;
-    }
-
-    getX(b) {
-        return b.vel * Math.cos(b.dir);
-    }
-
-    getY(b) {
-        return b.vel * Math.sin(b.dir);
-    }
-
-    applyMotion(b, time) {
-        b.x += this.getX(b) * time;
-        b.y += this.getY(b) * time;
-    }
-
-    updatePointsArray(gl, points, shaderProgram, name) {
+    updatePointsArray(gl, points, shaderProgram, attributeName) {
         const glBuffer = gl.createBuffer();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
         gl.bufferData(gl.ARRAY_BUFFER, points, gl.DYNAMIC_DRAW);
 
-        const loc = gl.getAttribLocation(shaderProgram, name);
+        const loc = gl.getAttribLocation(shaderProgram, attributeName);
 
         gl.enableVertexAttribArray(loc);
         gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
@@ -258,8 +248,8 @@ class page {
         const points = new Float32Array(this.balls.length * 2);
 
         this.balls.forEach((b, i) => {
-            points[i*2] = Math.round(b.x);
-            points[i*2+1] = Math.round(b.y);
+            points[i*2] = Math.round(b.pos.x);
+            points[i*2+1] = Math.round(b.pos.y);
         });
         
         this.updatePointsArray(this.gl, points, this.shaderProgram, "spritePosition");
