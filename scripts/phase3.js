@@ -1,8 +1,6 @@
 ﻿import * as site from "./site.js";
 import * as stats from "./stats.js";
 
-//const friction = 0.0;
-
 const vertexShaderCode = `
     attribute vec2 spritePosition; 
     uniform vec2 screenSize; 
@@ -52,7 +50,7 @@ class Vector{
         if(this.mag() === 0){
             return new Vector(0,0);
         } else {
-            let m = this.mag();
+            const m = this.mag();
             return new Vector(this.x / m, this.y / m);
         }
     }
@@ -63,10 +61,11 @@ class Vector{
 }
 
 class Ball{
-    constructor(x, y, r, velX, velY){
+    constructor(x, y, radius, velX, velY, texture){
         this.pos = new Vector(x,y);
-        this.r = r;
+        this.r = radius;
         this.vel = new Vector(velX, velY);
+        this.t = texture;
         
         return this;
     }
@@ -82,8 +81,8 @@ class page {
     shaderProgram;
     textureFiles = ["../images/db1.png","../images/db2.png","../images/db3.png","../images/db4.png","../images/db5.png","../images/db6.png","../images/db7.png"];
     glTexture = [];
-    ballMul = 5;
     balls = [];
+    ballsTextureMap = [];
     lastFrame = 0;
 
     dom = {
@@ -146,27 +145,43 @@ class page {
         return texture;
     }
 
-    radQuarter = Math.PI / 2;
-    rad3Quarter = (3 * Math.PI) / 2;
-    radFull = Math.PI * 2;
-    padding = 24;
+    initBalls(totalBalls) {
+        const buffer = 128;
+        const minSpeed = 0.1;
+        const maxSpeed = 0.8;
 
-    initBalls() {
-        const totalBalls = this.textureFiles.length * this.ballMul;
-
-        for(let i=0; i<totalBalls; i++) {
+        for(let i = 0; i < totalBalls; i++) {
             this.balls.push(new Ball(
-                Math.random() * this.gl.canvas.width,
-                Math.random() * this.gl.canvas.height,
+                (Math.random() * (this.gl.canvas.width - (buffer * 2))) + buffer,
+                (Math.random() * (this.gl.canvas.height - (buffer * 2))) + buffer,
                 24,
-                0.4 - ((Math.random() * 0.7) + 0.1),                
-                0.4 - ((Math.random() * 0.7) + 0.1)
+                (maxSpeed / 2) - ((Math.random() * (maxSpeed - minSpeed)) + minSpeed),                
+                (maxSpeed / 2) - ((Math.random() * (maxSpeed - minSpeed)) + minSpeed),
+                Math.floor((Math.random() * 6.9999))
             ));
         }
+
+        this.balls.sort((a, b) => {
+            return a.t - b.t;
+        });
+
+        for(let i = 0; i < this.textureFiles.length; i++) {
+            this.ballsTextureMap.push({min: 9999, max: -1});
+        }
+
+        this.balls.forEach((b, bi) => {
+            if (bi < this.ballsTextureMap[b.t].min) {
+                this.ballsTextureMap[b.t].min = bi;
+            }
+
+            if (bi > this.ballsTextureMap[b.t].max) {
+                this.ballsTextureMap[b.t].max = bi;
+            }
+        });
     }
 
     round(number, precision){
-        let factor = 10 ** precision;
+        const factor = 10 ** precision;
         return Math.round(number * factor) / factor;
     }
     
@@ -175,24 +190,24 @@ class page {
     }
     
     pen_res_bb(b1, b2){
-        let dist = b1.pos.subtr(b2.pos);
-        let pen_depth = b1.r + b2.r - dist.mag();
-        let pen_res = dist.unit().mult(pen_depth / 2);
+        const dist = b1.pos.subtr(b2.pos);
+        const pen_depth = b1.r + b2.r - dist.mag();
+        const pen_res = dist.unit().mult(pen_depth / 2);
         b1.pos = b1.pos.add(pen_res);
         b2.pos = b2.pos.add(pen_res.mult(-1));
     }
 
     coll_res_bb(b1, b2){
         //collision normal vector
-        let normal = b1.pos.subtr(b2.pos).unit();
+        const normal = b1.pos.subtr(b2.pos).unit();
         //relative velocity vector
-        let relVel = b1.vel.subtr(b2.vel);
+        const relVel = b1.vel.subtr(b2.vel);
         //separating velocity - relVel projected onto the collision normal vector
-        let sepVel = Vector.dot(relVel, normal);
+        const sepVel = Vector.dot(relVel, normal);
         //the projection value after the collision (multiplied by -1)
-        let new_sepVel = -sepVel;
+        const new_sepVel = -sepVel;
         //collision normal vector with the magnitude of the new_sepVel
-        let sepVelVec = normal.mult(new_sepVel);
+        const sepVelVec = normal.mult(new_sepVel);
     
         //adding the separating velocity vector to the original vel. vector
         b1.vel = b1.vel.add(sepVelVec);
@@ -212,7 +227,7 @@ class page {
                 b.vel.y *= -1;
             }
 
-            for (let i=index + 1; i<this.balls.length; i++) {
+            for (let i = index + 1; i < this.balls.length; i++) {
                 let b2 = this.balls[i];
 
                 if(this.coll_det_bb(b, b2)){
@@ -256,10 +271,14 @@ class page {
 
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-        for (let i = 0; i < this.glTexture.length; i++) {            
-            this.gl.bindTexture(this.gl.TEXTURE_2D, this.glTexture[i]);
+        for (let i = 0; i < this.glTexture.length; i++) {
+            const btm = this.ballsTextureMap[i]; 
 
-            this.gl.drawArrays(this.gl.POINTS, i * this.ballMul, this.ballMul);
+            if ((btm.max >= 0) && (btm.min < 999)) {
+                this.gl.bindTexture(this.gl.TEXTURE_2D, this.glTexture[i]);
+
+                this.gl.drawArrays(this.gl.POINTS, btm.min, (btm.max - btm.min) + 1);
+            }
         }
 
         this.stats.end();
@@ -304,7 +323,7 @@ class page {
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);   
 
-        this.initBalls();
+        this.initBalls(Math.max(10, Math.floor(Math.min(this.gl.canvas.width, this.gl.canvas.height) / 14)));
 
         this.initTextures(done);
     }
