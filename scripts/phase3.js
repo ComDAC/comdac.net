@@ -82,7 +82,6 @@ class page {
     textureFiles = ["../images/db1.png","../images/db2.png","../images/db3.png","../images/db4.png","../images/db5.png","../images/db6.png","../images/db7.png"];
     glTexture = [];
     balls = [];
-    ballsTextureMap = [];
     lastFrame = 0;
 
     dom = {
@@ -145,11 +144,7 @@ class page {
         return texture;
     }
 
-    initBalls(totalBalls) {
-        const buffer = 128;
-        const minSpeed = 0.1;
-        const maxSpeed = 0.8;
-
+    initBalls(totalBalls, buffer, minSpeed, maxSpeed) {
         for(let i = 0; i < totalBalls; i++) {
             this.balls.push(new Ball(
                 (Math.random() * (this.gl.canvas.width - (buffer * 2))) + buffer,
@@ -165,17 +160,13 @@ class page {
             return a.t - b.t;
         });
 
-        for(let i = 0; i < this.textureFiles.length; i++) {
-            this.ballsTextureMap.push({min: 9999, max: -1});
-        }
-
         this.balls.forEach((b, bi) => {
-            if (bi < this.ballsTextureMap[b.t].min) {
-                this.ballsTextureMap[b.t].min = bi;
+            if (bi < this.glTexture[b.t].min) {
+                this.glTexture[b.t].min = bi;
             }
 
-            if (bi > this.ballsTextureMap[b.t].max) {
-                this.ballsTextureMap[b.t].max = bi;
+            if (bi > this.glTexture[b.t].max) {
+                this.glTexture[b.t].max = bi;
             }
         });
     }
@@ -263,44 +254,55 @@ class page {
         const points = new Float32Array(this.balls.length * 2);
 
         this.balls.forEach((b, i) => {
-            points[i*2] = Math.round(b.pos.x);
-            points[i*2+1] = Math.round(b.pos.y);
+            points[i * 2] = Math.round(b.pos.x);
+            points[i * 2 + 1] = Math.round(b.pos.y);
         });
         
         this.updatePointsArray(this.gl, points, this.shaderProgram, "spritePosition");
 
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-        for (let i = 0; i < this.glTexture.length; i++) {
-            const btm = this.ballsTextureMap[i]; 
+        this.glTexture.forEach(t => {
+            if ((t.max >= 0) && (t.min < 999)) {
+                this.gl.bindTexture(this.gl.TEXTURE_2D, t.tex);
 
-            if ((btm.max >= 0) && (btm.min < 999)) {
-                this.gl.bindTexture(this.gl.TEXTURE_2D, this.glTexture[i]);
-
-                this.gl.drawArrays(this.gl.POINTS, btm.min, (btm.max - btm.min) + 1);
+                this.gl.drawArrays(this.gl.POINTS, t.min, (t.max - t.min) + 1);
             }
-        }
+        });
 
         this.stats.end();
     } 
 
+    initGLTextureObject() {        
+        this.textureFiles.forEach((tf, i) => {
+            this.glTexture[i] = {
+                tex: null,
+                min: 9999,
+                max: -1,
+                file: tf
+            };
+        });
+    }
+
     initTextures(done) {
         let loadCounter = 0;
 
-        this.textureFiles.forEach((tf, i) => {
-            loadCounter++;
+        this.glTexture.forEach(t => {
+            if ((t.max >= 0) && (t.min < 999)) {
+                loadCounter++;
 
-            const img = new Image();
-            img.src = tf;
+                const img = new Image();
+                img.src = t.file;
 
-            img.onload = () => {
-                this.glTexture[i] = this.loadTexture(this.gl, img);
+                img.onload = () => {
+                    t.tex = this.loadTexture(this.gl, img);
 
-                loadCounter--;
-                if (loadCounter === 0) {
-                    done();
-                }
-            };
+                    loadCounter--;
+                    if (loadCounter === 0) {
+                        done();
+                    }
+                };
+            }
         });
     }
 
@@ -321,9 +323,11 @@ class page {
         this.gl.useProgram(this.shaderProgram);
 
         this.gl.enable(this.gl.BLEND);
-        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);   
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);  
+        
+        this.initGLTextureObject();
 
-        this.initBalls(Math.max(10, Math.floor(Math.min(this.gl.canvas.width, this.gl.canvas.height) / 14)));
+        this.initBalls(Math.max(10, Math.floor(Math.min(this.gl.canvas.width, this.gl.canvas.height) / 14)), 128, 0.1, 0.9);
 
         this.initTextures(done);
     }
