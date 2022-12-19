@@ -1,9 +1,39 @@
 ﻿import * as site from "./site.js";
 import * as stats from "./stats.js";
 import * as THREE from "three";
-import * as particles from "./dacparticles.js";
+import { ParticleSystem } from "./dacparticles.js";
 import { GLTFLoader } from "GTFLoader";
 import { TrackballControls } from "TrackballControls";
+
+class ExpelParticleSystem extends ParticleSystem {   
+    spawn(elapsedTime, spray, minlife, maxlife, pos, dir, scale) {
+      const life = Math.random() * (maxlife - minlife) + minlife;
+  
+      const particle = super.spawn(pos.x, pos.y, pos.z, scale, 1, elapsedTime + life);
+  
+      const euler = new THREE.Euler((Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, "XYZ");
+      const tm = new THREE.Matrix4();
+      tm.makeRotationFromEuler(euler);
+  
+      const vel = new THREE.Vector3().copy(dir);
+  
+      vel.applyMatrix4(tm);
+  
+      particle.life = life;
+      particle.velocity = [vel.x, vel.y, vel.z];
+    }
+  
+    update(elapsedTime, deltaTime) {
+      this.particles.forEach((p) => {
+        p.position[0] += p.velocity[0] * deltaTime;
+        p.position[1] += p.velocity[1] * deltaTime;
+        p.position[2] += p.velocity[2] * deltaTime;
+        p.alpha = Math.max(((p.deathTime - elapsedTime) / (p.life)), 0) * 0.3;
+      });
+    
+      super.update(elapsedTime);
+    }
+  }
 
 class page {
     stats;
@@ -101,10 +131,10 @@ class page {
         this.scene.add(this.particleSpinner);
 
         //particle engine initialization.
-        this.spinnerParticle = new particles.ExpelParticleSystem(this.particleRed, width, height, THREE.AdditiveBlending);
+        this.spinnerParticle = new ExpelParticleSystem(this.particleRed, width, height, THREE.AdditiveBlending);
         this.scene.add(this.spinnerParticle.mesh);
 
-        this.engineParticle = new particles.ExpelParticleSystem(this.particleWhite, width, height, THREE.AdditiveBlending);
+        this.engineParticle = new ExpelParticleSystem(this.particleWhite, width, height, THREE.AdditiveBlending);
         this.scene.add(this.engineParticle.mesh);
 
         //initialize viewport        

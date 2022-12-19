@@ -1,9 +1,38 @@
 ﻿import * as site from "./site.js";
 import * as stats from "./stats.js";
 import * as THREE from "three";
-import * as particles from "./dacparticles.js";
+import { ParticleSystem } from "./dacparticles.js";
 import { GLTFLoader } from "GTFLoader";
-import { TrackballControls } from "TrackballControls";
+
+class PortalParticleSystem extends ParticleSystem {   
+    spawn(elapsedTime, spray, minlife, maxlife, pos, dir, scale) {
+      const life = Math.random() * (maxlife - minlife) + minlife;
+  
+      const particle = super.spawn(pos.x, pos.y, pos.z, scale, 1, elapsedTime + life);
+  
+      const euler = new THREE.Euler((Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, "XYZ");
+      const tm = new THREE.Matrix4();
+      tm.makeRotationFromEuler(euler);
+  
+      const vel = new THREE.Vector3().copy(dir);
+  
+      vel.applyMatrix4(tm);
+  
+      particle.life = life;
+      particle.velocity = [vel.x, vel.y, vel.z];
+    }
+  
+    update(elapsedTime, deltaTime) {
+      this.particles.forEach((p) => {
+        p.position[0] += p.velocity[0] * deltaTime;
+        p.position[1] += p.velocity[1] * deltaTime;
+        p.position[2] += p.velocity[2] * deltaTime;
+        p.alpha = (1 - Math.max(((p.deathTime - elapsedTime) / (p.life)), 0)) * 1;
+      });
+    
+      super.update(elapsedTime);
+    }
+  }
 
 class page {
     stats;
@@ -11,7 +40,6 @@ class page {
     camera;
     scene;
     renderer;
-    controls;
 
     lastFrameTime = 0;
 
@@ -43,14 +71,6 @@ class page {
 
         this.camera.position.z = 40;
 
-        this.controls = new TrackballControls(this.camera, this.renderer.domElement);
-        
-        this.controls.rotateSpeed = 18.0;
-        this.controls.zoomSpeed = 1.2;
-        this.controls.panSpeed = 0.2;        
-        this.controls.minDistance = 10;
-        this.controls.maxDistance = 100;
-
         //initialize objects
 
         this.tardispivot = new THREE.Object3D();
@@ -73,29 +93,18 @@ class page {
         this.tardisobj.matrixAutoUpdate = false;
 
         //scene light
-        const light = new THREE.PointLight(0xFFFFFF);
-
-        light.position.set(0, 0, 300);
-
-        this.scene.add(light);
+        for (let i=0; i<3; i++) {
+            const light = new THREE.PointLight(0xFFFFFF);
+    
+            light.position.set(0, 0, 200);
+    
+            this.scene.add(light);
+        }
         
         this.particleSpinner = new THREE.Object3D();
 
-        const lights = [25,0,0, -25,0,0, 0,25,0, 0,-25,0];
-
-        for(let i=0; i<lights.length - 2; i+=3) {
-            let pointLight = new THREE.PointLight(0xFF9999);
-            pointLight.position.set(lights[i], lights[i + 1], lights[i + 2]);
-
-            this.particleSpinner.add(pointLight);
-        }
-
-        this.particleSpinner.matrixAutoUpdate = false;
-        
-        this.scene.add(this.particleSpinner);
-
         //particle engine initialization.
-        this.spinnerParticle = new particles.ExpelParticleSystem(this.particleRed, width, height, THREE.AdditiveBlending);
+        this.spinnerParticle = new PortalParticleSystem(this.particleRed, width, height, THREE.AdditiveBlending);
         this.scene.add(this.spinnerParticle.mesh);
 
         //initialize viewport        
@@ -121,28 +130,18 @@ class page {
         this.tardis.rotation.y += 0.003 * deltaTime;
         this.tardis.rotation.z = Math.sin(((tm % 5000) / 5000) * (Math.PI * 2)) * 0.3;
 
-        this.particleSpinner.rotation.z += 0.001 * deltaTime;
-        this.particleSpinner.rotation.y += Math.sin(this.particleSpinner.rotation.z / 5) / 24;
-        this.particleSpinner.rotation.x += Math.cos(this.particleSpinner.rotation.z / 10) / 22;
-
         this.tardisobj.updateMatrix();
-        this.particleSpinner.updateMatrix();
 
         //spinner particles.
-        const spinnerPos = [new THREE.Vector3(25,0,0), new THREE.Vector3(-25,0,0), new THREE.Vector3(0,25,0), new THREE.Vector3(0,-25,0)];
-        const spinnerVel = [new THREE.Vector3(0,-100,0), new THREE.Vector3(0,100,0), new THREE.Vector3(0,0,-100),new THREE.Vector3(0,0,100)];
-        const spinnerSpray = Math.PI * 0.25;
+        const spinnerPos = new THREE.Vector3(0,0,-200);
+        const spinnerVel = new THREE.Vector3(0,0,100);
+        const spinnerSpray = Math.PI * 1;
         const spinnerEmission = Math.min(Math.floor(deltaTime * 1.55), 25);
 
-        for(let i = 0; i < spinnerPos.length; i++) {
-            spinnerPos[i].applyMatrix4(this.particleSpinner.matrixWorld);
-            spinnerVel[i].applyMatrix4(this.particleSpinner.matrixWorld);
+        spinnerVel.setLength(0.1);
 
-            spinnerVel[i].setLength(0.03);
-
-            for(let p = 0; p < spinnerEmission; p++) {
-                this.spinnerParticle.spawn(tm, spinnerSpray, 500, 1300, spinnerPos[i], spinnerVel[i], 2);
-            }
+        for(let p = 0; p < spinnerEmission; p++) {
+            this.spinnerParticle.spawn(tm, spinnerSpray, 3000, 3500, spinnerPos, spinnerVel, 2);
         }
 
         this.spinnerParticle.update(tm, deltaTime);
@@ -179,15 +178,11 @@ class page {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
 
-        this.controls.handleResize();
-
         this.renderer.setSize(width, height);
     }
 
     loop = (tm) => {
         requestAnimationFrame(this.loop);
-
-        this.controls.update();
 
         this.stats.begin();
 

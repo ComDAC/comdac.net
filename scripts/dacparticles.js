@@ -26,7 +26,7 @@ const fragmentShader = `
   }
 `;
  
-class ParticleSystem {
+export class ParticleSystem {
   texture;
   particles = new Array();
   geometry;
@@ -84,35 +84,5 @@ class ParticleSystem {
     this.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.alpha), 1));
     this.geometry.attributes.position.needsUpdate = true;
     this.geometry.attributes.scale.needsUpdate = true;
-  }
-}
-
-export class ExpelParticleSystem extends ParticleSystem {   
-  spawn(elapsedTime, spray, minlife, maxlife, pos, dir, scale) {
-    const life = Math.random() * (maxlife - minlife) + minlife;
-
-    const particle = super.spawn(pos.x, pos.y, pos.z, scale, 1, elapsedTime + life);
-
-    const euler = new THREE.Euler((Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, "XYZ");
-    const tm = new THREE.Matrix4();
-    tm.makeRotationFromEuler(euler);
-
-    const vel = new THREE.Vector3().copy(dir);
-
-    vel.applyMatrix4(tm);
-
-    particle.life = life;
-    particle.velocity = [vel.x, vel.y, vel.z];
-  }
-
-  update(elapsedTime, deltaTime) {
-    this.particles.forEach((p) => {
-      p.position[0] += p.velocity[0] * deltaTime;
-      p.position[1] += p.velocity[1] * deltaTime;
-      p.position[2] += p.velocity[2] * deltaTime;
-      p.alpha = Math.max(((p.deathTime - elapsedTime) / (p.life)), 0) * 0.3;
-    });
-  
-    super.update(elapsedTime);
   }
 }
