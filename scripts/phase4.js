@@ -9,7 +9,7 @@ class ExpelParticleSystem extends ParticleSystem {
     spawn(elapsedTime, spray, minlife, maxlife, pos, dir, scale) {
       const life = Math.random() * (maxlife - minlife) + minlife;
   
-      const particle = super.spawn(pos.x, pos.y, pos.z, scale, 1, elapsedTime + life);
+      const particle = super.spawn(pos.x, pos.y, pos.z, 0, scale, 1, elapsedTime + life);
   
       const euler = new THREE.Euler((Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, "XYZ");
       const tm = new THREE.Matrix4();
@@ -131,10 +131,10 @@ class page {
         this.scene.add(this.particleSpinner);
 
         //particle engine initialization.
-        this.spinnerParticle = new ExpelParticleSystem(this.particleRed, width, height, THREE.AdditiveBlending);
+        this.spinnerParticle = new ExpelParticleSystem([this.particleRed], width, height, THREE.AdditiveBlending);
         this.scene.add(this.spinnerParticle.mesh);
 
-        this.engineParticle = new ExpelParticleSystem(this.particleWhite, width, height, THREE.AdditiveBlending);
+        this.engineParticle = new ExpelParticleSystem([this.particleWhite], width, height, THREE.AdditiveBlending);
         this.scene.add(this.engineParticle.mesh);
 
         //initialize viewport        
