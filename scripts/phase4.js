@@ -6,10 +6,10 @@ import { GLTFLoader } from "GTFLoader";
 import { TrackballControls } from "TrackballControls";
 
 class ExpelParticleSystem extends ParticleSystem {   
-    spawn(elapsedTime, spray, minlife, maxlife, pos, dir, scale) {
+    spawn(elapsedTime, spray, minlife, maxlife, pos, dir, scale, textureIndex) {
       const life = Math.random() * (maxlife - minlife) + minlife;
   
-      const particle = super.spawn(pos.x, pos.y, pos.z, 0, scale, 1, elapsedTime + life);
+      const particle = super.spawn(pos.x, pos.y, pos.z, textureIndex, scale, 1, elapsedTime + life);
   
       const euler = new THREE.Euler((Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, "XYZ");
       const tm = new THREE.Matrix4();
@@ -55,8 +55,7 @@ class page {
     particleRed;
     particleWhite;
 
-    spinnerParticle;
-    engineParticle;
+    particles;
 
     dom = {
         divLoadingMessage: null
@@ -131,11 +130,8 @@ class page {
         this.scene.add(this.particleSpinner);
 
         //particle engine initialization.
-        this.spinnerParticle = new ExpelParticleSystem([this.particleRed], width, height, THREE.AdditiveBlending);
-        this.scene.add(this.spinnerParticle.mesh);
-
-        this.engineParticle = new ExpelParticleSystem([this.particleWhite], width, height, THREE.AdditiveBlending);
-        this.scene.add(this.engineParticle.mesh);
+        this.particles = new ExpelParticleSystem([this.particleWhite, this.particleRed], width, height, THREE.AdditiveBlending);
+        this.scene.add(this.particles.mesh);
 
         //initialize viewport        
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -176,11 +172,9 @@ class page {
             enginePos.applyMatrix4(this.awingobj.matrixWorld);
 
             for(let p = 0; p < engineEmission; p++) {
-              this.engineParticle.spawn(tm, engineSpray, 50, 150, enginePos, engineVel, 2);
+              this.particles.spawn(tm, engineSpray, 50, 150, enginePos, engineVel, 2, 0);
             }
         }
-
-        this.engineParticle.update(tm, deltaTime);
 
         //spinner particles.
         const spinnerPos = [new THREE.Vector3(25,0,0),new THREE.Vector3(-25,0,0)];
@@ -195,11 +189,12 @@ class page {
           spinnerVel[i].setLength(0.03);
 
           for(let p = 0; p < spinnerEmission; p++) {
-            this.spinnerParticle.spawn(tm, spinnerSpray, 500, 1300, spinnerPos[i], spinnerVel[i], 2);
+            this.particles.spawn(tm, spinnerSpray, 500, 1300, spinnerPos[i], spinnerVel[i], 2, 1);
           }
         }
 
-        this.spinnerParticle.update(tm, deltaTime);
+        //update all particles
+        this.particles.update(tm, deltaTime);
 
         //render final scene
         this.renderer.render(this.scene, this.camera);
@@ -234,8 +229,7 @@ class page {
         const width = window.innerWidth;
         const height = window.innerHeight;
         
-        this.spinnerParticle.updateAspect(width, height);
-        this.engineParticle.updateAspect(width, height);
+        this.particles.updateAspect(width, height);
 
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
