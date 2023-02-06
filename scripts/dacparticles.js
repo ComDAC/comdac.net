@@ -99,12 +99,22 @@ export class ParticleSystem {
  
   update(elapsedTime) { 
     this.particles = this.particles.filter((particle) => elapsedTime <= particle.deathTime);
+
+    const position = new Array();
+    const scale = new Array();
+    const alpha = new Array();
+    const textureIndex = new Array();
+
+    for(const particle of this.particles) {
+      position.push(...particle.position);
+      scale.push(particle.scale);
+      alpha.push(particle.alpha);
+      textureIndex.push(particle.textureIndex);
+    }
  
-    this.geometry.setAttribute("position", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.position).flat(), 3));
-    this.geometry.setAttribute("scale", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.scale), 1));
-    this.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(this.particles.map((particle) => particle.alpha), 1));
-    this.geometry.setAttribute('textureIndex', new THREE.Int32BufferAttribute(this.particles.map((particle) => particle.textureIndex), 1));
-    this.geometry.attributes.position.needsUpdate = true;
-    this.geometry.attributes.scale.needsUpdate = true;
+    this.geometry.setAttribute("position", new THREE.Float32BufferAttribute(position, 3));
+    this.geometry.setAttribute("scale", new THREE.Float32BufferAttribute(scale, 1));
+    this.geometry.setAttribute("alpha", new THREE.Float32BufferAttribute(alpha, 1));
+    this.geometry.setAttribute('textureIndex', new THREE.Int32BufferAttribute(textureIndex, 1));
   }
 }

@@ -207,7 +207,11 @@ class page {
     }
 
     processBalls(time) {
-        this.balls.forEach((b, index) => {
+        const l = this.balls.length;
+
+        for(let index = 0; index < l; index++) {
+            const b = this.balls[index];
+
             b.reposition(time);   
 
             if (((b.pos.x < b.r) && (b.vel.x < 0)) || ((b.pos.x > (this.gl.canvas.width - b.r)) && (b.vel.x > 0))) {
@@ -218,7 +222,7 @@ class page {
                 b.vel.y *= -1;
             }
 
-            for (let i = index + 1; i < this.balls.length; i++) {
+            for (let i = index + 1; i < l; i++) {
                 let b2 = this.balls[i];
 
                 if(this.coll_det_bb(b, b2)){
@@ -226,7 +230,7 @@ class page {
                     this.coll_res_bb(b, b2);
                 }
             }         
-        });
+        }
     }
 
     updatePointsArray(gl, points, shaderProgram, attributeName) {
@@ -262,13 +266,11 @@ class page {
 
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-        this.glTexture.forEach(t => {
-            if ((t.max >= 0) && (t.min < 999)) {
-                this.gl.bindTexture(this.gl.TEXTURE_2D, t.tex);
+        for(const t of this.glTexture) if ((t.max >= 0) && (t.min < 999)) {
+            this.gl.bindTexture(this.gl.TEXTURE_2D, t.tex);
 
-                this.gl.drawArrays(this.gl.POINTS, t.min, (t.max - t.min) + 1);
-            }
-        });
+            this.gl.drawArrays(this.gl.POINTS, t.min, (t.max - t.min) + 1);
+        }
 
         this.stats.end();
     } 
@@ -286,24 +288,22 @@ class page {
 
     initTextures(done) {
         let loadCounter = 0;
+    
+        for(const t of this.glTexture) if ((t.max >= 0) && (t.min < 999)) {
+            loadCounter++;
 
-        this.glTexture.forEach(t => {
-            if ((t.max >= 0) && (t.min < 999)) {
-                loadCounter++;
+            const img = new Image();
+            img.src = t.file;
 
-                const img = new Image();
-                img.src = t.file;
+            img.onload = () => {
+                t.tex = this.loadTexture(this.gl, img);
 
-                img.onload = () => {
-                    t.tex = this.loadTexture(this.gl, img);
-
-                    loadCounter--;
-                    if (loadCounter === 0) {
-                        done();
-                    }
-                };
-            }
-        });
+                loadCounter--;
+                if (loadCounter === 0) {
+                    done();
+                }
+            };
+        }
     }
 
     init(done) {        

@@ -23,12 +23,12 @@ class PortalParticleSystem extends ParticleSystem {
     }
   
     update(elapsedTime, deltaTime) {
-      this.particles.forEach((p) => {
+      for(const p of this.particles) {
         p.position[0] += p.velocity[0] * deltaTime;
         p.position[1] += p.velocity[1] * deltaTime;
         p.position[2] += p.velocity[2] * deltaTime;
         p.alpha = (1 - Math.max(((p.deathTime - elapsedTime) / (p.life)), 0)) * 1;
-      });
+      }
     
       super.update(elapsedTime);
     }
