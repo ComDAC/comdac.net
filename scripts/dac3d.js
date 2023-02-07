@@ -24,39 +24,35 @@ export function resizeStage(canvas, ctx) {
 }
 
 export function renderStage(stage, ctx) {
-    stage.sort((a,b) => b.z - a.z).forEach((poly) => {
-        if (poly.z > wall) {
-            switch (poly.type) {
-                case 0:
-                    ctx.globalAlpha = 1;
-                    ctx.fillStyle = poly.col;
-                    ctx.strokeStyle = poly.col;
+    stage.sort((a,b) => b.z - a.z);
+    
+    for(const poly of stage) if (poly.z > wall) {
+        switch (poly.type) {
+            case 0:
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = poly.col;
+                ctx.strokeStyle = poly.col;
 
-                    ctx.beginPath();
+                ctx.beginPath();
 
-                    poly.points.forEach((point, i) => {
-                        if (i===0) {
-                            ctx.moveTo(point[0], point[1]);
-                        } else {
-                            ctx.lineTo(point[0], point[1]);
-                        }
-                    });
+                ctx.moveTo(poly.points[0][0], poly.points[0][1]);
 
-                    ctx.fill();
-                    ctx.stroke();
-                    break;
+                for(let i=1; i<poly.points.length; i++) ctx.lineTo(poly.points[i][0], poly.points[i][1]);
 
-                case 1:
-                    ctx.globalAlpha = poly.alpha;
-                    const mul = scale * poly.scale;
-                    const shift = Math.floor(poly.sprite.hd * mul);
-                    const dim = Math.floor(poly.sprite.d * mul);
+                ctx.fill();
+                ctx.stroke();
+                break;
 
-                    ctx.drawImage(poly.sprite.img, poly.point[0] - shift, poly.point[1] - shift, dim, dim);
-                    break;
-            }
+            case 1:
+                ctx.globalAlpha = poly.alpha;
+                const mul = scale * poly.scale;
+                const shift = Math.floor(poly.sprite.hd * mul);
+                const dim = Math.floor(poly.sprite.d * mul);
+
+                ctx.drawImage(poly.sprite.img, poly.point[0] - shift, poly.point[1] - shift, dim, dim);
+                break;
         }
-    });
+    }
 }
 
 function colorLuminance(hex, lum) {
@@ -148,9 +144,9 @@ export class object3d {
             convert2d(V3_mul4x4(m, this.pts[i], this.pt3d[i]), this.pt[i]);
         }
 
-        this.polys.forEach((poly, i) => {
+        for(let i=0; i<this.polys.length;i++) {
+            const poly = this.polys[i];
             const norm = new Array(3);
-
             V3_normal(this.pt3d[poly[1]], this.pt3d[poly[0]], this.pt3d[poly[2]], norm);
 
             if (norm[2] > 0) {
@@ -171,8 +167,8 @@ export class object3d {
 
                 s.push(pg);
             }
-        });
-    };
+        }
+    }
 }
 
 //-- Particle Engine -----------------------------------------------------
@@ -265,20 +261,18 @@ export class particleEngine {
     render(s, pos, dir, ms, n) {
         let newParticles = n;
 
-        this.particles.forEach((p) => {
-            if (p.update(ms) < 0) {
-                if (newParticles > 0) {
-                    const vel = this.computeVel(dir);
-                    const ttl = Math.random() * this.mlm + this.ml;
+        for(const p of this.particles) if (p.update(ms) < 0) {
+            if (newParticles > 0) {
+                const vel = this.computeVel(dir);
+                const ttl = Math.random() * this.mlm + this.ml;
 
-                    p.reset(pos, vel, ttl);
-                    p.draw(s, this.mlfade);
-                    --newParticles;
-                }
-            } else {
+                p.reset(pos, vel, ttl);
                 p.draw(s, this.mlfade);
+                --newParticles;
             }
-        });
+        } else {
+            p.draw(s, this.mlfade);
+        }
 
         while (newParticles--) {
             const vel = this.computeVel(dir);            
@@ -303,11 +297,9 @@ export class particleEngine {
     }
 
     renderOff(s, ms) {
-        this.particles.forEach((p) => {
-            if (p.update(ms) >= 0) {
-                p.draw(s, this.mlfade);
-            }
-        });
+        for(const p of this.particles) if (p.update(ms) >= 0) {
+            p.draw(s, this.mlfade);
+        }
 
         this.particles = this.particles.filter((p) => p.ttl >= 0);
     }

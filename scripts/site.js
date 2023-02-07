@@ -1,13 +1,6 @@
 let pageObj;
 
 export function registerPage(page) {
-    if (pageObj) {
-        if (pageObj.onResize) window.removeEventListener("resize", pageObj.onResize);
-        if (pageObj.onClose) window.removeEventListener("close", pageObj.onClose);
-
-        pageObj = null;
-    }
-
     pageObj = new page();
 
     window.addEventListener("load", pageLoad);
@@ -19,11 +12,17 @@ export function registerPage(page) {
 function pageLoad() {
     if (pageObj.dom) populateDom(pageObj.dom);
 
-    if (pageObj.onLoad) pageObj.onLoad();
+    if (pageObj.onLoad) {
+        const params = new URLSearchParams(window.location.search);
+
+        pageObj.onLoad(params);
+    }
 }
 
 function populateDom(dom) {
-    Object.keys(dom).forEach((key) => {
-        dom[key] = document.querySelector("#" + key);
-    });
+    const keys = Object.keys(dom);
+
+    for (const key of keys) {
+        dom[key] = document.getElementById(key);
+    }
 }

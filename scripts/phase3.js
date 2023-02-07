@@ -20,33 +20,33 @@ const fragmentShaderCode = `
     }
 `;
 
-class Vector{
+class Vector {
     constructor(x, y){
         this.x = x;
         this.y = y;
     }
 
-    add(v){
+    add(v) {
         return new Vector(this.x + v.x, this.y + v.y);
     }
 
-    subtr(v){
+    subtr(v) {
         return new Vector(this.x - v.x, this.y - v.y);
     }
 
-    mag(){
+    mag() {
         return Math.sqrt(this.x ** 2 + this.y ** 2);
     }
 
-    mult(n){
+    mult(n) {
         return new Vector(this.x * n, this.y * n);
     }
 
-    normal(){
+    normal() {
         return new Vector(-this.y, this.x).unit();
     }
 
-    unit(){
+    unit() {
         if(this.mag() === 0){
             return new Vector(0,0);
         } else {
@@ -55,13 +55,13 @@ class Vector{
         }
     }
     
-    static dot(v1, v2){
+    static dot(v1, v2) {
         return (v1.x * v2.x) + (v1.y * v2.y);
     }
 }
 
-class Ball{
-    constructor(x, y, radius, velX, velY, texture){
+class Ball {
+    constructor(x, y, radius, velX, velY, texture) {
         this.pos = new Vector(x,y);
         this.r = radius;
         this.vel = new Vector(velX, velY);
@@ -70,7 +70,7 @@ class Ball{
         return this;
     }
 
-    reposition(time){
+    reposition(time) {
         this.pos = this.pos.add(this.vel.mult(time));
     }
 }
@@ -160,7 +160,9 @@ class page {
             return a.t - b.t;
         });
 
-        this.balls.forEach((b, bi) => {
+        for(let bi = 0; bi < this.balls.length; bi++) {
+            const b = this.balls[bi];
+
             if (bi < this.glTexture[b.t].min) {
                 this.glTexture[b.t].min = bi;
             }
@@ -168,7 +170,7 @@ class page {
             if (bi > this.glTexture[b.t].max) {
                 this.glTexture[b.t].max = bi;
             }
-        });
+        }
     }
 
     round(number, precision){
@@ -257,10 +259,12 @@ class page {
 
         const points = new Float32Array(this.balls.length * 2);
 
-        this.balls.forEach((b, i) => {
+        for(let i = 0; i < this.balls.length; i++) {
+            const b = this.balls[i];
+
             points[i * 2] = Math.round(b.pos.x);
             points[i * 2 + 1] = Math.round(b.pos.y);
-        });
+        }
         
         this.updatePointsArray(this.gl, points, this.shaderProgram, "spritePosition");
 
@@ -275,15 +279,15 @@ class page {
         this.stats.end();
     } 
 
-    initGLTextureObject() {        
-        this.textureFiles.forEach((tf, i) => {
+    initGLTextureObject() {              
+        for(let i = 0; i < this.textureFiles.length; i++) {
             this.glTexture[i] = {
                 tex: null,
                 min: 9999,
                 max: -1,
-                file: tf
+                file: this.textureFiles[bi]
             };
-        });
+        }
     }
 
     initTextures(done) {
