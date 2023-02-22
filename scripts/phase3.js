@@ -285,7 +285,7 @@ class page {
                 tex: null,
                 min: 9999,
                 max: -1,
-                file: this.textureFiles[bi]
+                file: this.textureFiles[i]
             };
         }
     }
