@@ -1,38 +1,23 @@
 ﻿import * as site from "./site.js";
 import * as stats from "./stats.js";
 import * as THREE from "three";
-import { ParticleSystem } from "./dacparticles.js";
 import { GLTFLoader } from "GTFLoader";
 
-class PortalParticleSystem extends ParticleSystem {   
-    spawn(elapsedTime, spray, minlife, maxlife, pos, dir, scale, textureIndex) {
-      const life = Math.random() * (maxlife - minlife) + minlife;
-  
-      const particle = super.spawn(pos.x, pos.y, pos.z, textureIndex, scale, 1, elapsedTime + life);
-  
-      const euler = new THREE.Euler((Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, (Math.random() - 0.5) * spray, "XYZ");
-      const tm = new THREE.Matrix4();
-      tm.makeRotationFromEuler(euler);
-  
-      const vel = new THREE.Vector3().copy(dir);
-  
-      vel.applyMatrix4(tm);
-  
-      particle.life = life;
-      particle.velocity = [vel.x, vel.y, vel.z];
-    }
-  
-    update(elapsedTime, deltaTime) {
-      for(const p of this.particles) {
-        p.position[0] += p.velocity[0] * deltaTime;
-        p.position[1] += p.velocity[1] * deltaTime;
-        p.position[2] += p.velocity[2] * deltaTime;
-        p.alpha = (1 - Math.max(((p.deathTime - elapsedTime) / (p.life)), 0)) * 1;
-      }
-    
-      super.update(elapsedTime);
-    }
-  }
+class CustomSinCurve extends THREE.Curve {
+
+	constructor( scale = 1 ) {
+		super();
+		this.scale = scale;
+	}
+
+	getPoint( t, optionalTarget = new THREE.Vector3() ) {
+		const tx = Math.sin( t * Math.PI) * 2.5;
+		const ty = Math.cos( (Math.PI / 2.2) * t );
+		const tz = (t * 32) - 30;
+
+		return optionalTarget.set( tx, ty, tz ).multiplyScalar( this.scale );
+	}
+}
 
 class page {
     stats;
@@ -47,12 +32,10 @@ class page {
     tardispivot;
     tardisobj;
 
-    particleSpinner;
+    galaxyTexture;
 
-    particleRed;
-    particleWhite;
-
-    spinnerParticle;
+    tubeMaterial;
+    tubeMesh;
 
     dom = {
         divLoadingMessage: null
@@ -91,22 +74,18 @@ class page {
         
         this.tardispivot.add(this.tardisobj);
 
-        this.tardisobj.matrixAutoUpdate = false;
-
+        const lightCols = [0xaaaaaa, 0xffaaaa, 0xaaaaff];
         //scene light
-        for (let i=0; i<3; i++) {
-            const light = new THREE.PointLight(0xFFFFFF);
+        lightCols.forEach(c => {
+            const light = new THREE.PointLight(c);
     
             light.position.set(0, 0, 200);
     
             this.scene.add(light);
-        }
-        
-        this.particleSpinner = new THREE.Object3D();
+        });
 
-        //particle engine initialization.
-        this.spinnerParticle = new PortalParticleSystem([this.particleRed, this.particleWhite], width, height, THREE.AdditiveBlending);
-        this.scene.add(this.spinnerParticle.mesh);
+        //TODO build tunnel here.
+        this.createTunnel();
 
         //initialize viewport        
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -120,6 +99,28 @@ class page {
         requestAnimationFrame(this.loop);
     }
 
+    createTunnel() {
+        const path = new CustomSinCurve( 30 );
+
+        const geometry = new THREE.TubeGeometry( path, 170, 42, 30, false );
+
+        this.tubeMaterial = new THREE.MeshBasicMaterial( { 
+            map: this.galaxyTexture,
+            side: THREE.BackSide
+        });
+    
+        this.tubeMaterial.map.wrapS = THREE.MirroredRepeatWrapping;
+        this.tubeMaterial.map.wrapT = THREE.MirroredRepeatWrapping;
+        this.tubeMaterial.map.repeat.set(4, 2);
+
+        this.tubeMesh = new THREE.Mesh( geometry, this.tubeMaterial );
+
+        this.tubeMesh.rotation.y = 0.1;
+
+        this.scene.add( this.tubeMesh );
+    }
+    
+
     render(tm) {
         const deltaTime = tm - this.lastFrameTime;
         this.lastFrameTime = tm;
@@ -130,22 +131,11 @@ class page {
         
         this.tardis.rotation.y += 0.003 * deltaTime;
         this.tardis.rotation.z = Math.sin(((tm % 5000) / 5000) * (Math.PI * 2)) * 0.3;
-
-        this.tardisobj.updateMatrix();
-
-        //spinner particles.
-        const spinnerPos = new THREE.Vector3(0,0,-200);
-        const spinnerVel = new THREE.Vector3(0,0,100);
-        const spinnerSpray = Math.PI * 1;
-        const spinnerEmission = Math.min(Math.floor(deltaTime * 1.55), 25);
-
-        spinnerVel.setLength(0.1);
-
-        for(let p = 0; p < spinnerEmission; p++) {
-            this.spinnerParticle.spawn(tm, spinnerSpray, 3000, 3500, spinnerPos, spinnerVel, 2, Math.round(Math.random()));
-        }
-
-        this.spinnerParticle.update(tm, deltaTime);
+        
+        this.tubeMaterial.map.offset.x += 0.002 * deltaTime;
+        this.tubeMaterial.map.offset.y += 0.0001 * deltaTime;
+        
+        this.tubeMesh.rotation.z += 0.0015 * deltaTime;
 
         //render final scene
         this.renderer.render(this.scene, this.camera);
@@ -155,22 +145,16 @@ class page {
     onLoad = () => {
         this.stats = stats.init();
 
-        let loadCounter = 3;
+        let loadCounter = 2;
       
         new GLTFLoader().load("../models/tardis.glb", (glb) => {
             this.tardis = glb.scene;
 
             if (--loadCounter === 0) this.init();
         });
-      
-        new THREE.TextureLoader().load("../images/particle-white.png", (texture) => {
-            this.particleWhite = texture;
 
-            if (--loadCounter === 0) this.init();
-        });
-      
-        new THREE.TextureLoader().load("../images/particle-red.png", (texture) => {
-            this.particleRed = texture;
+        new THREE.TextureLoader().load("../images/galaxyTexture.jpg", (texture) => {
+            this.galaxyTexture = texture;
 
             if (--loadCounter === 0) this.init();
         });
@@ -179,8 +163,6 @@ class page {
     onResize = () => {
         const width = window.innerWidth;
         const height = window.innerHeight;
-        
-        this.spinnerParticle.updateAspect(width, height);
 
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
