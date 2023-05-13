@@ -37,6 +37,9 @@ class page {
     tubeMaterial;
     tubeMesh;
 
+    tubeMaterial2;
+    tubeMesh2;
+
     dom = {
         divLoadingMessage: null
     };
@@ -118,6 +121,25 @@ class page {
         this.tubeMesh.rotation.y = 0.1;
 
         this.scene.add( this.tubeMesh );
+
+        const geometry2 = new THREE.TubeGeometry( path, 170, 40, 30, false );
+
+        this.tubeMaterial2 = new THREE.MeshBasicMaterial( { 
+            map: this.galaxyTexture,
+            side: THREE.BackSide,
+            transparent: true,
+            opacity: 0.5
+        });
+    
+        this.tubeMaterial2.map.wrapS = THREE.MirroredRepeatWrapping;
+        this.tubeMaterial2.map.wrapT = THREE.MirroredRepeatWrapping;
+        this.tubeMaterial2.map.repeat.set(3, 4);
+
+        this.tubeMesh2 = new THREE.Mesh( geometry2, this.tubeMaterial2 );
+
+        this.tubeMesh2.rotation.y = 0.1;
+
+        this.scene.add( this.tubeMesh2 );
     }
     
 
@@ -134,8 +156,12 @@ class page {
         
         this.tubeMaterial.map.offset.x += 0.002 * deltaTime;
         this.tubeMaterial.map.offset.y += 0.0001 * deltaTime;
+
+        this.tubeMaterial2.map.offset.x += 0.002 * deltaTime;
+        this.tubeMaterial2.map.offset.y -= 0.001 * deltaTime;
         
         this.tubeMesh.rotation.z += 0.0015 * deltaTime;
+        this.tubeMesh2.rotation.z += 0.0015 * deltaTime;
 
         //render final scene
         this.renderer.render(this.scene, this.camera);
