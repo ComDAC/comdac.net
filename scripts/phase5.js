@@ -32,7 +32,8 @@ class page {
     tardispivot;
     tardisobj;
 
-    galaxyTexture;
+    tunnelTexture;
+    tunnelTexture2;
 
     tubeMaterial;
     tubeMesh;
@@ -108,7 +109,7 @@ class page {
         const geometry = new THREE.TubeGeometry( path, 170, 42, 30, false );
 
         this.tubeMaterial = new THREE.MeshBasicMaterial( { 
-            map: this.galaxyTexture,
+            map: this.tunnelTexture,
             side: THREE.BackSide
         });
     
@@ -125,10 +126,11 @@ class page {
         const geometry2 = new THREE.TubeGeometry( path, 170, 40, 30, false );
 
         this.tubeMaterial2 = new THREE.MeshBasicMaterial( { 
-            map: this.galaxyTexture,
+            map: this.tunnelTexture2,
             side: THREE.BackSide,
             transparent: true,
-            opacity: 0.5
+            opacity: 0.2,
+            blending: THREE.MultiplyBlending
         });
     
         this.tubeMaterial2.map.wrapS = THREE.MirroredRepeatWrapping;
@@ -154,10 +156,10 @@ class page {
         this.tardis.rotation.y += 0.003 * deltaTime;
         this.tardis.rotation.z = Math.sin(((tm % 5000) / 5000) * (Math.PI * 2)) * 0.3;
         
-        this.tubeMaterial.map.offset.x += 0.002 * deltaTime;
+        this.tubeMaterial.map.offset.x -= 0.002 * deltaTime;
         this.tubeMaterial.map.offset.y += 0.0001 * deltaTime;
 
-        this.tubeMaterial2.map.offset.x += 0.002 * deltaTime;
+        this.tubeMaterial2.map.offset.x -= 0.002 * deltaTime;
         this.tubeMaterial2.map.offset.y -= 0.001 * deltaTime;
         
         this.tubeMesh.rotation.z += 0.0015 * deltaTime;
@@ -171,7 +173,7 @@ class page {
     onLoad = () => {
         this.stats = stats.init();
 
-        let loadCounter = 2;
+        let loadCounter = 3;
       
         new GLTFLoader().load("../models/tardis.glb", (glb) => {
             this.tardis = glb.scene;
@@ -179,8 +181,14 @@ class page {
             if (--loadCounter === 0) this.init();
         });
 
-        new THREE.TextureLoader().load("../images/galaxyTexture.jpg", (texture) => {
-            this.galaxyTexture = texture;
+        new THREE.TextureLoader().load("../images/tunnelOutside.png", (texture) => {
+            this.tunnelTexture = texture;
+
+            if (--loadCounter === 0) this.init();
+        });
+
+        new THREE.TextureLoader().load("../images/tunnelInside.png", (texture) => {
+            this.tunnelTexture2 = texture;
 
             if (--loadCounter === 0) this.init();
         });
