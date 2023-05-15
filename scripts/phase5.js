@@ -4,7 +4,6 @@ import * as THREE from "three";
 import { GLTFLoader } from "GTFLoader";
 
 class CustomSinCurve extends THREE.Curve {
-
 	constructor( scale = 1 ) {
 		super();
 		this.scale = scale;
@@ -17,6 +16,51 @@ class CustomSinCurve extends THREE.Curve {
 
 		return optionalTarget.set( tx, ty, tz ).multiplyScalar( this.scale );
 	}
+}
+
+class TimeTunnelTube {
+    #xvel;
+    #yvel;
+    #rotvel;
+
+    #material;
+    #mesh; 
+
+    constructor(scene, map, radius, opacity, xvel, yvel, rotvel) {
+        this.#xvel = xvel;
+        this.#yvel = yvel;
+        this.#rotvel = rotvel;
+
+        const path = new CustomSinCurve( 30 );
+
+        const geometry = new THREE.TubeGeometry( path, 170, radius, 30, false );
+
+        const materialOptions = {
+            map: map,
+            side: THREE.BackSide
+        };
+
+        if (opacity < 1) {
+            materialOptions.transparent = true;
+            materialOptions.opacity = 0.2;
+            materialOptions.blending = THREE.MultiplyBlending;
+        }
+
+        this.#material = new THREE.MeshBasicMaterial(materialOptions);
+
+        this.#mesh = new THREE.Mesh( geometry, this.#material );
+
+        this.#mesh.rotation.y = 0.1;
+
+        scene.add( this.#mesh );
+    }
+
+    update(deltaTime) {
+        this.#material.map.offset.x += this.#xvel * deltaTime;
+        this.#material.map.offset.y += this.#yvel * deltaTime;
+        
+        this.#mesh.rotation.z += this.#rotvel * deltaTime;
+    }
 }
 
 class page {
@@ -34,12 +78,9 @@ class page {
 
     tunnelTexture;
     tunnelTexture2;
+    tunnelTexture3;
 
-    tubeMaterial;
-    tubeMesh;
-
-    tubeMaterial2;
-    tubeMesh2;
+    tunnels = new Array();
 
     dom = {
         divLoadingMessage: null
@@ -78,18 +119,22 @@ class page {
         
         this.tardispivot.add(this.tardisobj);
 
-        const lightCols = [0xaaaaaa, 0xffaaaa, 0xaaaaff];
-        //scene light
-        lightCols.forEach(c => {
-            const light = new THREE.PointLight(c);
-    
-            light.position.set(0, 0, 200);
-    
-            this.scene.add(light);
-        });
+        function createLight(col, intensity, x, y, z, parent) {
+            const light = new THREE.PointLight(col, intensity);
 
-        //TODO build tunnel here.
-        this.createTunnel();
+            light.position.set(x, y, z);
+
+            parent.add(light);
+        }
+
+        createLight(0xaaaaaa, 0.5, 0, 0, 200, this.scene);
+        createLight(0xff9999, 0.7, -200, 0, 0, this.tardispivot);
+        createLight(0x9999ff, 0.7, 120, 120, 0, this.tardispivot);
+
+        //build tunnel here.
+        this.tunnels.push(new TimeTunnelTube(this.scene, this.tunnelTexture, 42, 1, -0.0012, 0.0001, 0.0015));
+        this.tunnels.push(new TimeTunnelTube(this.scene, this.tunnelTexture2, 41, 0.2, -0.0016, -0.001, 0.0015));
+        this.tunnels.push(new TimeTunnelTube(this.scene, this.tunnelTexture3, 40, 0.3, -0.002, 0.0008, 0.0015));
 
         //initialize viewport        
         this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -103,67 +148,18 @@ class page {
         requestAnimationFrame(this.loop);
     }
 
-    createTunnel() {
-        const path = new CustomSinCurve( 30 );
-
-        const geometry = new THREE.TubeGeometry( path, 170, 42, 30, false );
-
-        this.tubeMaterial = new THREE.MeshBasicMaterial( { 
-            map: this.tunnelTexture,
-            side: THREE.BackSide
-        });
-    
-        this.tubeMaterial.map.wrapS = THREE.MirroredRepeatWrapping;
-        this.tubeMaterial.map.wrapT = THREE.MirroredRepeatWrapping;
-        this.tubeMaterial.map.repeat.set(4, 2);
-
-        this.tubeMesh = new THREE.Mesh( geometry, this.tubeMaterial );
-
-        this.tubeMesh.rotation.y = 0.1;
-
-        this.scene.add( this.tubeMesh );
-
-        const geometry2 = new THREE.TubeGeometry( path, 170, 40, 30, false );
-
-        this.tubeMaterial2 = new THREE.MeshBasicMaterial( { 
-            map: this.tunnelTexture2,
-            side: THREE.BackSide,
-            transparent: true,
-            opacity: 0.2,
-            blending: THREE.MultiplyBlending
-        });
-    
-        this.tubeMaterial2.map.wrapS = THREE.MirroredRepeatWrapping;
-        this.tubeMaterial2.map.wrapT = THREE.MirroredRepeatWrapping;
-        this.tubeMaterial2.map.repeat.set(3, 4);
-
-        this.tubeMesh2 = new THREE.Mesh( geometry2, this.tubeMaterial2 );
-
-        this.tubeMesh2.rotation.y = 0.1;
-
-        this.scene.add( this.tubeMesh2 );
-    }
-    
-
     render(tm) {
         const deltaTime = tm - this.lastFrameTime;
         this.lastFrameTime = tm;
-        //do delta stuff here.
 
+        //do delta stuff here.
         this.tardispivot.rotation.y += 0.0018 * deltaTime;
         this.tardispivot.rotation.z = Math.sin(((tm % 4200) / 4200) * (Math.PI * 2)) * 0.4;
         
         this.tardis.rotation.y += 0.003 * deltaTime;
         this.tardis.rotation.z = Math.sin(((tm % 5000) / 5000) * (Math.PI * 2)) * 0.3;
         
-        this.tubeMaterial.map.offset.x -= 0.002 * deltaTime;
-        this.tubeMaterial.map.offset.y += 0.0001 * deltaTime;
-
-        this.tubeMaterial2.map.offset.x -= 0.002 * deltaTime;
-        this.tubeMaterial2.map.offset.y -= 0.001 * deltaTime;
-        
-        this.tubeMesh.rotation.z += 0.0015 * deltaTime;
-        this.tubeMesh2.rotation.z += 0.0015 * deltaTime;
+        this.tunnels.forEach(t => t.update(deltaTime));
 
         //render final scene
         this.renderer.render(this.scene, this.camera);
@@ -173,7 +169,7 @@ class page {
     onLoad = () => {
         this.stats = stats.init();
 
-        let loadCounter = 3;
+        let loadCounter = 4;
       
         new GLTFLoader().load("../models/tardis.glb", (glb) => {
             this.tardis = glb.scene;
@@ -182,13 +178,31 @@ class page {
         });
 
         new THREE.TextureLoader().load("../images/tunnelOutside.png", (texture) => {
+            texture.wrapS = THREE.MirroredRepeatWrapping;
+            texture.wrapT = THREE.MirroredRepeatWrapping;
+            texture.repeat.set(4, 2);
+
             this.tunnelTexture = texture;
 
             if (--loadCounter === 0) this.init();
         });
 
         new THREE.TextureLoader().load("../images/tunnelInside.png", (texture) => {
+            texture.wrapS = THREE.MirroredRepeatWrapping;
+            texture.wrapT = THREE.MirroredRepeatWrapping;
+            texture.repeat.set(3, 4);
+
             this.tunnelTexture2 = texture;
+
+            if (--loadCounter === 0) this.init();
+        });
+
+        new THREE.TextureLoader().load("../images/tunnelInside.png", (texture) => {
+            texture.wrapS = THREE.MirroredRepeatWrapping;
+            texture.wrapT = THREE.MirroredRepeatWrapping;
+            texture.repeat.set(4, 2);
+
+            this.tunnelTexture3 = texture;
 
             if (--loadCounter === 0) this.init();
         });
