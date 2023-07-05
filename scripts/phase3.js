@@ -331,7 +331,7 @@ class page {
         
         this.initGLTextureObject();
 
-        this.initBalls(Math.max(10, Math.floor(Math.min(this.gl.canvas.width, this.gl.canvas.height) / 14)), 128, 0.1, 0.9);
+        this.initBalls(Math.max(10, Math.floor(Math.min(this.gl.canvas.width, this.gl.canvas.height) / 12)), 128, 0.1, 0.9);
 
         this.initTextures(done);
     }
