@@ -120,16 +120,16 @@ class page {
         this.tardispivot.add(this.tardisobj);
 
         function createLight(col, intensity, x, y, z, parent) {
-            const light = new THREE.PointLight(col, intensity);
+            const light = new THREE.PointLight(col, intensity, 0, 0.001);
 
             light.position.set(x, y, z);
 
             parent.add(light);
         }
 
-        createLight(0xaaaaaa, 0.5, 0, 0, 200, this.scene);
-        createLight(0xff9999, 0.7, -200, 0, 0, this.tardispivot);
-        createLight(0x9999ff, 0.7, 120, 120, 0, this.tardispivot);
+        createLight(0xaaaaaa, 0.9, 0, 0, 200, this.scene);
+        createLight(0xff9999, 1.0, -200, 0, 0, this.tardispivot);
+        createLight(0x9999ff, 1.0, 120, 120, 0, this.tardispivot);
 
         //build tunnel here.
         this.tunnels.push(new TimeTunnelTube(this.scene, this.tunnelTexture, 42, 1, -0.0012, 0.0001, 0.0015));

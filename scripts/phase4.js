@@ -106,7 +106,7 @@ class page {
         this.awingobj.matrixAutoUpdate = false;
 
         //scene light
-        const light = new THREE.PointLight(0x999999);
+        const light = new THREE.PointLight(0x999999, 1.0, 0, 0.001);
 
         light.position.set(0, 0, 200);
 
@@ -118,7 +118,7 @@ class page {
         const lights = [25, -25];
 
         for(let i=0; i<lights.length; i++) {
-            const pointLight = new THREE.PointLight(0xFF9999);
+            const pointLight = new THREE.PointLight(0xFF9999, 0.9, 0, 0.001);
 
             pointLight.position.set(lights[i], 0, 0);
 
