@@ -3,9 +3,12 @@ import * as stats from "./stats.js";
 
 const vertexShaderCode = `
     attribute vec2 spritePosition; 
+    attribute mediump float textureOffsetX;
     uniform vec2 screenSize; 
+    varying mediump float vTextureOffsetX;
 
     void main() {
+        vTextureOffsetX = textureOffsetX;
         vec4 screenTransform = vec4(2.0 / screenSize.x, -2.0 / screenSize.y, -1.0, 1.0);
         gl_Position = vec4(spritePosition * screenTransform.xy + screenTransform.zw, 1.0, 1.0);
         gl_PointSize = 48.0;
@@ -14,9 +17,12 @@ const vertexShaderCode = `
  
 const fragmentShaderCode = `
     uniform sampler2D spriteTexture;
+    varying mediump float vTextureOffsetX;
 
     void main() {
-        gl_FragColor = texture2D(spriteTexture, gl_PointCoord);
+        mediump vec2 uv = vec2((gl_PointCoord.x / 7.0) + vTextureOffsetX, gl_PointCoord.y);
+
+        gl_FragColor = texture2D(spriteTexture, uv);
     }
 `;
 
@@ -79,8 +85,8 @@ class page {
     stats;
     gl;
     shaderProgram;
-    textureFiles = ["../images/db1.png","../images/db2.png","../images/db3.png","../images/db4.png","../images/db5.png","../images/db6.png","../images/db7.png"];
-    glTexture = [];
+    textureFile = "../images/dragonballs.png";
+    glTexture;
     balls = [];
     lastFrame = 0;
 
@@ -155,27 +161,6 @@ class page {
                 Math.floor((Math.random() * 6.9999))
             ));
         }
-
-        this.balls.sort((a, b) => {
-            return a.t - b.t;
-        });
-
-        for(let bi = 0; bi < this.balls.length; bi++) {
-            const b = this.balls[bi];
-
-            if (bi < this.glTexture[b.t].min) {
-                this.glTexture[b.t].min = bi;
-            }
-
-            if (bi > this.glTexture[b.t].max) {
-                this.glTexture[b.t].max = bi;
-            }
-        }
-    }
-
-    round(number, precision){
-        const factor = 10 ** precision;
-        return Math.round(number * factor) / factor;
     }
     
     coll_det_bb(b1, b2){
@@ -210,24 +195,26 @@ class page {
 
     processBalls(time) {
         const l = this.balls.length;
+        const cw = this.gl.canvas.width;
+        const ch = this.gl.canvas.height;
 
         for(let index = 0; index < l; index++) {
             const b = this.balls[index];
 
             b.reposition(time);   
 
-            if (((b.pos.x < b.r) && (b.vel.x < 0)) || ((b.pos.x > (this.gl.canvas.width - b.r)) && (b.vel.x > 0))) {
+            if (((b.pos.x < b.r) && (b.vel.x < 0)) || ((b.pos.x > (cw - b.r)) && (b.vel.x > 0))) {
                 b.vel.x *= -1;
             }
     
-            if (((b.pos.y < b.r) && (b.vel.y < 0)) || ((b.pos.y > (this.gl.canvas.height - b.r)) && (b.vel.y > 0))) {
+            if (((b.pos.y < b.r) && (b.vel.y < 0)) || ((b.pos.y > (ch - b.r)) && (b.vel.y > 0))) {
                 b.vel.y *= -1;
             }
 
             for (let i = index + 1; i < l; i++) {
-                let b2 = this.balls[i];
+                const b2 = this.balls[i];
 
-                if(this.coll_det_bb(b, b2)){
+                if (this.coll_det_bb(b, b2)) {
                     this.pen_res_bb(b, b2);
                     this.coll_res_bb(b, b2);
                 }
@@ -235,7 +222,7 @@ class page {
         }
     }
 
-    updatePointsArray(gl, points, shaderProgram, attributeName) {
+    updatePointsArray(gl, points, shaderProgram, attributeName, pointsPer) {
         const glBuffer = gl.createBuffer();
 
         gl.bindBuffer(gl.ARRAY_BUFFER, glBuffer);
@@ -244,7 +231,21 @@ class page {
         const loc = gl.getAttribLocation(shaderProgram, attributeName);
 
         gl.enableVertexAttribArray(loc);
-        gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+        gl.vertexAttribPointer(loc, pointsPer, gl.FLOAT, false, 0, 0);
+    }
+
+    initAttributes = () => {
+        const textures = new Float32Array(this.balls.length);
+
+        for(let i = 0; i < this.balls.length; i++) {
+            const b = this.balls[i];
+
+            textures[i] = (1.0 / 7.0) * b.t;
+        }
+        
+        this.updatePointsArray(this.gl, textures, this.shaderProgram, "textureOffsetX", 1);
+
+        this.gl.bindTexture(this.gl.TEXTURE_2D, this.glTexture);
     }
 
     loop = (ct) => {
@@ -266,48 +267,24 @@ class page {
             points[i * 2 + 1] = Math.round(b.pos.y);
         }
         
-        this.updatePointsArray(this.gl, points, this.shaderProgram, "spritePosition");
+        this.updatePointsArray(this.gl, points, this.shaderProgram, "spritePosition", 2);
 
         this.gl.clear(this.gl.COLOR_BUFFER_BIT);
 
-        for(const t of this.glTexture) if ((t.max >= 0) && (t.min < 999)) {
-            this.gl.bindTexture(this.gl.TEXTURE_2D, t.tex);
-
-            this.gl.drawArrays(this.gl.POINTS, t.min, (t.max - t.min) + 1);
-        }
+        this.gl.drawArrays(this.gl.POINTS, 0, this.balls.length);
 
         this.stats.end();
-    } 
-
-    initGLTextureObject() {              
-        for(let i = 0; i < this.textureFiles.length; i++) {
-            this.glTexture[i] = {
-                tex: null,
-                min: 9999,
-                max: -1,
-                file: this.textureFiles[i]
-            };
-        }
     }
 
-    initTextures(done) {
-        let loadCounter = 0;
-    
-        for(const t of this.glTexture) if ((t.max >= 0) && (t.min < 999)) {
-            loadCounter++;
+    initTexture(done) {
+        const img = new Image();
+        img.src = this.textureFile;
 
-            const img = new Image();
-            img.src = t.file;
+        img.onload = () => {
+            this.glTexture = this.loadTexture(this.gl, img);
 
-            img.onload = () => {
-                t.tex = this.loadTexture(this.gl, img);
-
-                loadCounter--;
-                if (loadCounter === 0) {
-                    done();
-                }
-            };
-        }
+            done();
+        };
     }
 
     init(done) {        
@@ -328,12 +305,10 @@ class page {
 
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);  
-        
-        this.initGLTextureObject();
 
-        this.initBalls(Math.max(10, Math.floor(Math.min(this.gl.canvas.width, this.gl.canvas.height) / 12)), 128, 0.1, 0.9);
+        this.initBalls(Math.max(10, Math.floor(Math.min(this.gl.canvas.width, this.gl.canvas.height) / 10)), 128, 0.1, 0.9);
 
-        this.initTextures(done);
+        this.initTexture(done);
     }
     
     //-- entry points ----------------------------
@@ -351,17 +326,22 @@ class page {
         this.init(() => {
             this.dom.divLoadingMessage.style.display = "none";
 
+            this.initAttributes();
+
             requestAnimationFrame(this.loop);
         });
     }
 
     onResize = () => {
-        this.gl.canvas.width = this.dom.divCanvas.clientWidth;
-        this.gl.canvas.height = this.dom.divCanvas.clientHeight;
-        
-        this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height);
+        const cw = this.dom.divCanvas.clientWidth;
+        const ch = this.dom.divCanvas.clientHeight;
 
-        this.gl.uniform2f(this.gl.getUniformLocation(this.shaderProgram, "screenSize"), this.gl.canvas.width, this.gl.canvas.height);
+        this.gl.canvas.width = cw;
+        this.gl.canvas.height = ch;
+        
+        this.gl.viewport(0, 0, cw, ch);
+
+        this.gl.uniform2f(this.gl.getUniformLocation(this.shaderProgram, "screenSize"), cw, ch);
     }
 }
 
