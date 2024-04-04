@@ -1,0 +1,16 @@
+{
+    "version": "1.0",
+    "defaultProvider": "unpkg",
+    "libraries": [
+      {
+        "library": "three@0.163.0",
+        "destination": "lib/three/",
+        "files": [
+          "build/three.module.js",
+          "examples/jsm/loaders/GLTFLoader.js",
+          "examples/jsm/utils/BufferGeometryUtils.js",
+          "examples/jsm/controls/TrackballControls.js"
+        ]
+      }
+    ]
+  }
