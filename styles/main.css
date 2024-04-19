@@ -91,10 +91,19 @@
 a {
     text-decoration: none;
     color: White;
+    transition: all 1s ease;
+}
+
+a svg {
+    transition: all 1s ease;
 }
 
     a:hover {
         color: Yellow;
+    }
+
+    a:hover svg {
+        fill: yellow !important;
     }
 
 .dialog {
