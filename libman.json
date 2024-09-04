@@ -3,7 +3,7 @@
     "defaultProvider": "unpkg",
     "libraries": [
       {
-        "library": "three@0.167.0",
+        "library": "three@0.168.0",
         "destination": "lib/three/",
         "files": [
           "build/three.module.js",
